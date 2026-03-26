@@ -1,0 +1,11 @@
+.pet-portal-embed {
+  width: 100%;
+}
+
+.pet-portal-embed__frame {
+  display: block;
+  width: 100%;
+  min-height: var(--pet-portal-min-height, 960px);
+  border: 0;
+  background: transparent;
+}

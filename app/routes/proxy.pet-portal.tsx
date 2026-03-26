@@ -1,30 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
+import type { FormEvent } from "react";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
-import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 
-const SUPABASE_SCHEMA =
-  import.meta.env.VITE_SUPABASE_SCHEMA || (import.meta.env.DEV ? "develop" : "public");
-
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
-  const supabaseBucket = process.env.SUPABASE_BUCKET;
-
-  if (!supabaseUrl || !supabasePublishableKey || !supabaseBucket) {
-    throw new Response("Missing required Supabase env vars: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_BUCKET", {
-      status: 500,
-    });
-  }
-
-  return {
-    shopDomain: session.shop,
-    supabaseUrl,
-    supabasePublishableKey,
-    supabaseBucket,
-  };
+type SupabaseConfig = {
+  url: string;
+  serviceRoleKey: string;
+  bucket: string;
+  schema: string;
 };
 
 type PetType = "dog" | "cat" | "other";
@@ -57,6 +41,14 @@ type PetProfileRow = {
   adoption_date: string | null;
   weight_kg: number | null;
   photo_path: string | null;
+};
+
+type ActionResult = {
+  ok: boolean;
+  message?: string;
+  pets?: PetProfile[];
+  pet?: PetProfile;
+  deletedId?: string;
 };
 
 const DOG_BREEDS = [
@@ -101,9 +93,44 @@ const CAT_BREEDS = [
   "Other",
 ];
 
-const supabaseHeaders = (supabasePublishableKey: string) => ({
-  apikey: supabasePublishableKey,
-  Authorization: `Bearer ${supabasePublishableKey}`,
+const getSupabaseConfig = (): SupabaseConfig => {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseBucket = process.env.SUPABASE_BUCKET;
+  const schema =
+    process.env.SUPABASE_SCHEMA ||
+    process.env.VITE_SUPABASE_SCHEMA ||
+    (process.env.NODE_ENV === "production" ? "public" : "develop");
+
+  if (!supabaseUrl || !supabaseServiceRoleKey || !supabaseBucket) {
+    throw new Response(
+      "Missing required Supabase env vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET",
+      { status: 500 },
+    );
+  }
+
+  return {
+    url: supabaseUrl,
+    serviceRoleKey: supabaseServiceRoleKey,
+    bucket: supabaseBucket,
+    schema,
+  };
+};
+
+const getCustomerId = (request: Request) => {
+  const requestUrl = new URL(request.url);
+  return requestUrl.searchParams.get("logged_in_customer_id") || requestUrl.searchParams.get("customer_id");
+};
+
+const getShopDomain = (request: Request, sessionShop?: string) => {
+  if (sessionShop) return sessionShop;
+  const requestUrl = new URL(request.url);
+  return requestUrl.searchParams.get("shop");
+};
+
+const supabaseHeaders = (supabaseServiceRoleKey: string) => ({
+  apikey: supabaseServiceRoleKey,
+  Authorization: `Bearer ${supabaseServiceRoleKey}`,
 });
 
 const createId = () =>
@@ -155,8 +182,180 @@ const mapRowToPet = (supabaseUrl: string, supabaseBucket: string, row: PetProfil
 const createStoragePath = (shopDomain: string, fileName: string) =>
   `${shopDomain}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
 
+const listPets = async (config: SupabaseConfig, shopDomain: string, customerId: string) => {
+  const query = new URLSearchParams({
+    select: "id,first_name,last_name,pet_name,pet_type,breed,gender,birthday,adoption_date,weight_kg,photo_path",
+    shop_domain: `eq.${shopDomain}`,
+    customer_id: `eq.${customerId}`,
+    order: "created_at.asc",
+  });
+
+  const response = await fetch(`${config.url}/rest/v1/pet_profiles?${query.toString()}`, {
+    headers: {
+      ...supabaseHeaders(config.serviceRoleKey),
+      "Accept-Profile": config.schema,
+    },
+  });
+  if (!response.ok) throw new Error("Failed to load pet profiles.");
+
+  const rows = (await response.json()) as PetProfileRow[];
+  return rows.map((row) => mapRowToPet(config.url, config.bucket, row));
+};
+
+export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session } = await authenticate.public.appProxy(request);
+  getSupabaseConfig();
+
+  const shopDomain = getShopDomain(request, session?.shop);
+  const customerId = getCustomerId(request);
+
+  if (!shopDomain) throw new Response("Missing shop domain in app proxy request.", { status: 400 });
+
+  return {
+    shopDomain,
+    customerId: customerId ?? null,
+  };
+};
+
+export const action = async ({ request }: ActionFunctionArgs) => {
+  const { session } = await authenticate.public.appProxy(request);
+  const config = getSupabaseConfig();
+  const customerId = getCustomerId(request);
+  const shopDomain = getShopDomain(request, session?.shop);
+
+  if (!shopDomain) {
+    return Response.json({ ok: false, message: "Missing shop domain in app proxy request." }, { status: 400 });
+  }
+  if (!customerId) {
+    return Response.json({ ok: false, message: "Please sign in to your customer account first." }, { status: 401 });
+  }
+
+  const formData = await request.formData();
+  const intent = String(formData.get("intent") ?? "");
+
+  if (intent === "list") {
+    const pets = await listPets(config, shopDomain, customerId);
+    return Response.json({ ok: true, pets });
+  }
+
+  if (intent === "delete") {
+    const id = String(formData.get("id") ?? "");
+    const photoPath = String(formData.get("photoPath") ?? "");
+    if (!id) return Response.json({ ok: false, message: "Missing pet id." }, { status: 400 });
+
+    const response = await fetch(
+      `${config.url}/rest/v1/pet_profiles?id=eq.${id}&customer_id=eq.${customerId}&shop_domain=eq.${shopDomain}`,
+      {
+        method: "DELETE",
+        headers: {
+          ...supabaseHeaders(config.serviceRoleKey),
+          "Content-Profile": config.schema,
+        },
+      },
+    );
+    if (!response.ok) return Response.json({ ok: false, message: "Failed to delete pet profile." }, { status: 500 });
+
+    if (photoPath) {
+      await fetch(`${config.url}/storage/v1/object/${config.bucket}/${encodeStoragePath(photoPath)}`, {
+        method: "DELETE",
+        headers: supabaseHeaders(config.serviceRoleKey),
+      }).catch(() => undefined);
+    }
+
+    return Response.json({ ok: true, message: "Pet profile removed.", deletedId: id });
+  }
+
+  if (intent !== "save") return Response.json({ ok: false, message: "Unsupported action." }, { status: 400 });
+
+  const mode = String(formData.get("mode") ?? "create");
+  const id = String(formData.get("id") ?? "");
+  const petName = String(formData.get("petName") ?? "").trim();
+  if (!petName) return Response.json({ ok: false, message: "Please enter a pet name." }, { status: 400 });
+
+  let photoPath = String(formData.get("photoPath") ?? "");
+  let uploadWarning = "";
+  const photoFile = formData.get("photo");
+  if (photoFile instanceof File && photoFile.size > 0) {
+    const nextPhotoPath = createStoragePath(shopDomain, photoFile.name);
+    const uploadResponse = await fetch(
+      `${config.url}/storage/v1/object/${config.bucket}/${encodeStoragePath(nextPhotoPath)}`,
+      {
+        method: "POST",
+        headers: {
+          ...supabaseHeaders(config.serviceRoleKey),
+          "Content-Type": photoFile.type || "application/octet-stream",
+          "x-upsert": "true",
+        },
+        body: Buffer.from(await photoFile.arrayBuffer()),
+      },
+    );
+    if (uploadResponse.ok) {
+      photoPath = nextPhotoPath;
+    } else {
+      const bodyText = await uploadResponse.text();
+      uploadWarning = bodyText.includes("row-level security")
+        ? "Pet details were saved, but photo upload is blocked by the current Supabase storage policy."
+        : "Pet details were saved, but photo upload failed.";
+    }
+  }
+
+  const payload = {
+    shop_domain: shopDomain,
+    customer_id: customerId,
+    consent: true,
+    page_url: String(formData.get("pageUrl") ?? "") || null,
+    first_name: String(formData.get("firstName") ?? "") || null,
+    last_name: String(formData.get("lastName") ?? "") || null,
+    pet_name: petName,
+    pet_type: String(formData.get("petType") ?? "dog"),
+    breed: String(formData.get("breed") ?? "") || null,
+    gender: String(formData.get("gender") ?? "unknown"),
+    birthday: String(formData.get("birthday") ?? "") || null,
+    adoption_date: String(formData.get("adoptionDate") ?? "") || null,
+    weight_kg: String(formData.get("weightKg") ?? "")
+      ? Number(String(formData.get("weightKg")))
+      : null,
+    photo_path: photoPath || null,
+    photo_mime: photoFile instanceof File && photoFile.size > 0 ? photoFile.type || null : null,
+    photo_size: photoFile instanceof File && photoFile.size > 0 ? String(photoFile.size) : null,
+  };
+
+  const response = await fetch(
+    mode === "create"
+      ? `${config.url}/rest/v1/pet_profiles`
+      : `${config.url}/rest/v1/pet_profiles?id=eq.${id}&customer_id=eq.${customerId}&shop_domain=eq.${shopDomain}`,
+    {
+      method: mode === "create" ? "POST" : "PATCH",
+      headers: {
+        ...supabaseHeaders(config.serviceRoleKey),
+        "Content-Type": "application/json",
+        "Content-Profile": config.schema,
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    return Response.json(
+      { ok: false, message: mode === "create" ? "Failed to create pet profile." : "Failed to update pet profile." },
+      { status: 500 },
+    );
+  }
+
+  const rows = (await response.json()) as PetProfileRow[];
+  const saved = rows[0];
+  if (!saved) return Response.json({ ok: false, message: "Failed to save pet profile." }, { status: 500 });
+
+  return Response.json({
+    ok: true,
+    message: uploadWarning || (mode === "create" ? "New pet profile added." : "Pet profile updated."),
+    pet: mapRowToPet(config.url, config.bucket, saved),
+  });
+};
+
 export default function PetPortalRoute() {
-  const { shopDomain, supabaseUrl, supabasePublishableKey, supabaseBucket } = useLoaderData<typeof loader>();
+  const { customerId } = useLoaderData<typeof loader>();
   const [pets, setPets] = useState<PetProfile[]>([]);
   const [activeId, setActiveId] = useState("");
   const [mode, setMode] = useState<"create" | "edit">("create");
@@ -176,23 +375,32 @@ export default function PetPortalRoute() {
     [pets, activeId],
   );
 
+  const postAction = async (formData: FormData): Promise<ActionResult> => {
+    const endpoint = typeof window !== "undefined" ? window.location.href : "/apps/pet-portal";
+    const response = await fetch(endpoint, {
+      method: "POST",
+      body: formData,
+    });
+    const payload = (await response.json().catch(() => null)) as ActionResult | null;
+    if (!payload) throw new Error("Unexpected server response.");
+    if (!response.ok || !payload.ok) throw new Error(payload.message || "Request failed.");
+    return payload;
+  };
+
   const fetchPets = async () => {
+    if (!customerId) {
+      setLoadingPets(false);
+      setPets([]);
+      setActiveId("");
+      return;
+    }
+
     setLoadingPets(true);
     try {
-      const query = new URLSearchParams({
-        select: "id,first_name,last_name,pet_name,pet_type,breed,gender,birthday,adoption_date,weight_kg,photo_path",
-        shop_domain: `eq.${shopDomain}`,
-        order: "created_at.asc",
-      });
-      const response = await fetch(`${supabaseUrl}/rest/v1/pet_profiles?${query.toString()}`, {
-        headers: {
-          ...supabaseHeaders(supabasePublishableKey),
-          "Accept-Profile": SUPABASE_SCHEMA,
-        },
-      });
-      if (!response.ok) throw new Error("Failed to load pet profiles.");
-      const rows = (await response.json()) as PetProfileRow[];
-      const nextPets = rows.map((row) => mapRowToPet(supabaseUrl, supabaseBucket, row));
+      const formData = new FormData();
+      formData.set("intent", "list");
+      const data = await postAction(formData);
+      const nextPets = data.pets ?? [];
       setPets(nextPets);
       setActiveId((current) => (nextPets.some((pet) => pet.id === current) ? current : nextPets[0]?.id ?? ""));
     } catch (error) {
@@ -204,7 +412,8 @@ export default function PetPortalRoute() {
 
   useEffect(() => {
     void fetchPets();
-  }, [shopDomain]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId]);
 
   const beginCreate = () => {
     setMode("create");
@@ -231,20 +440,11 @@ export default function PetPortalRoute() {
     if (!activePet) return;
     try {
       setSaving(true);
-      const response = await fetch(`${supabaseUrl}/rest/v1/pet_profiles?id=eq.${activePet.id}`, {
-        method: "DELETE",
-        headers: {
-          ...supabaseHeaders(supabasePublishableKey),
-          "Content-Profile": SUPABASE_SCHEMA,
-        },
-      });
-      if (!response.ok) throw new Error("Failed to delete pet profile.");
-      if (activePet.photoPath) {
-        await fetch(`${supabaseUrl}/storage/v1/object/${supabaseBucket}/${encodeStoragePath(activePet.photoPath)}`, {
-          method: "DELETE",
-          headers: supabaseHeaders(supabasePublishableKey),
-        }).catch(() => undefined);
-      }
+      const formData = new FormData();
+      formData.set("intent", "delete");
+      formData.set("id", activePet.id);
+      formData.set("photoPath", activePet.photoPath);
+      await postAction(formData);
       setConfirmOpen(false);
       setActionMenuOpen(false);
       setMessage("Pet profile removed.");
@@ -256,32 +456,7 @@ export default function PetPortalRoute() {
     }
   };
 
-  const uploadPhoto = async (file: File) => {
-    const photoPath = createStoragePath(shopDomain, file.name);
-    const response = await fetch(
-      `${supabaseUrl}/storage/v1/object/${supabaseBucket}/${encodeStoragePath(photoPath)}`,
-      {
-        method: "POST",
-        headers: {
-          ...supabaseHeaders(supabasePublishableKey),
-          "Content-Type": file.type || "application/octet-stream",
-          "x-upsert": "true",
-        },
-        body: file,
-      },
-    );
-    if (!response.ok) {
-      const bodyText = await response.text();
-      throw new Error(
-        bodyText.includes("row-level security")
-          ? "Pet details were saved, but photo upload is blocked by the current Supabase storage policy."
-          : "Pet details were saved, but photo upload failed.",
-      );
-    }
-    return photoPath;
-  };
-
-  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!draft.petName.trim()) {
       setMessage("Please enter a pet name.");
@@ -290,61 +465,30 @@ export default function PetPortalRoute() {
 
     try {
       setSaving(true);
-      let photoPath = draft.photoPath;
-      let uploadWarning = "";
+      const formData = new FormData();
+      formData.set("intent", "save");
+      formData.set("mode", mode);
+      formData.set("id", draft.id);
+      formData.set("firstName", draft.firstName);
+      formData.set("lastName", draft.lastName);
+      formData.set("petName", draft.petName.trim());
+      formData.set("petType", draft.petType);
+      formData.set("breed", draft.breed);
+      formData.set("gender", draft.gender);
+      formData.set("birthday", draft.birthday);
+      formData.set("adoptionDate", draft.adoptionDate);
+      formData.set("weightKg", draft.weightKg);
+      formData.set("photoPath", draft.photoPath);
+      formData.set("pageUrl", typeof window !== "undefined" ? window.location.href : "");
+      if (selectedPhotoFile) formData.set("photo", selectedPhotoFile);
 
-      if (selectedPhotoFile) {
-        try {
-          photoPath = await uploadPhoto(selectedPhotoFile);
-        } catch (error) {
-          uploadWarning = error instanceof Error ? error.message : "Photo upload failed.";
-        }
-      }
-
-      const payload = {
-        shop_domain: shopDomain,
-        customer_id: null,
-        consent: true,
-        page_url: typeof window !== "undefined" ? window.location.href : null,
-        first_name: draft.firstName || null,
-        last_name: draft.lastName || null,
-        pet_name: draft.petName.trim(),
-        pet_type: draft.petType,
-        breed: draft.breed || null,
-        gender: draft.gender,
-        birthday: draft.birthday || null,
-        adoption_date: draft.adoptionDate || null,
-        weight_kg: draft.weightKg ? Number(draft.weightKg) : null,
-        photo_path: photoPath || null,
-        photo_mime: selectedPhotoFile?.type || null,
-        photo_size: selectedPhotoFile ? String(selectedPhotoFile.size) : null,
-      };
-
-      const response = await fetch(
-        mode === "create"
-          ? `${supabaseUrl}/rest/v1/pet_profiles`
-          : `${supabaseUrl}/rest/v1/pet_profiles?id=eq.${draft.id}`,
-        {
-          method: mode === "create" ? "POST" : "PATCH",
-          headers: {
-            ...supabaseHeaders(supabasePublishableKey),
-            "Content-Type": "application/json",
-            "Content-Profile": SUPABASE_SCHEMA,
-            Prefer: "return=representation",
-          },
-          body: JSON.stringify(payload),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(mode === "create" ? "Failed to create pet profile." : "Failed to update pet profile.");
-      }
+      const data = await postAction(formData);
 
       setDrawerOpen(false);
       setSelectedPhotoFile(null);
       setSelectedPhotoName("");
       setDraft(createEmptyPet());
-      setMessage(uploadWarning || (mode === "create" ? "New pet profile added." : "Pet profile updated."));
+      setMessage(data.message ?? (mode === "create" ? "New pet profile added." : "Pet profile updated."));
       await fetchPets();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to save pet profile.");
@@ -367,7 +511,7 @@ export default function PetPortalRoute() {
   const breedOptions = draft.petType === "dog" ? DOG_BREEDS : CAT_BREEDS;
 
   return (
-    <s-page heading="Pet Portal">
+    <main>
       <style>{`
         @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
         .pet-portal{font-family:"Poppins","Trebuchet MS",sans-serif;color:#111;background:#f4f4f4;border:1px solid rgba(17,17,17,.1);border-radius:24px;padding:18px}
@@ -433,7 +577,14 @@ export default function PetPortalRoute() {
               ))}
             </div>
             <div className="actions">
-              <button className="button secondary" type="button" onClick={() => setActionMenuOpen((open) => !open)}>Action</button>
+              <button
+                className="button secondary"
+                type="button"
+                disabled={!customerId}
+                onClick={() => setActionMenuOpen((open) => !open)}
+              >
+                Action
+              </button>
               {actionMenuOpen ? (
                 <div className="menu">
                   <button className="menu-item" type="button" onClick={beginCreate}>Add new pet</button>
@@ -446,7 +597,9 @@ export default function PetPortalRoute() {
         </section>
 
         <section className="card-wrap">
-          {loadingPets ? (
+          {!customerId ? (
+            <div className="empty">Please sign in or create an account to manage your pet profile.</div>
+          ) : loadingPets ? (
             <div className="empty">Loading pet profiles...</div>
           ) : activePet ? (
             <article className="card">
@@ -521,8 +674,6 @@ export default function PetPortalRoute() {
           </div>
         ) : null}
       </div>
-    </s-page>
+    </main>
   );
 }
-
-export const headers: HeadersFunction = (headersArgs) => boundary.headers(headersArgs);
