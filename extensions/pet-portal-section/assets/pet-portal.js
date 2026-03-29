@@ -1,0 +1,307 @@
+(() => {
+  const roots = document.querySelectorAll("[data-pet-portal]");
+  if (!roots.length) return;
+
+  const dogBreeds = ["Labrador Retriever", "Golden Retriever", "German Shepherd", "Border Collie", "Cocker Spaniel", "Springer Spaniel", "French Bulldog", "Bulldog", "Beagle", "Dachshund", "Poodle", "Cockapoo", "Labradoodle", "Cavapoo", "Cavalier King Charles Spaniel", "Staffordshire Bull Terrier", "Chihuahua", "Pomeranian", "Siberian Husky", "Corgi", "Mixed Breed", "Other"];
+  const catBreeds = ["British Shorthair", "Ragdoll", "Maine Coon", "Persian", "Siamese", "Bengal", "Sphynx", "Scottish Fold", "Russian Blue", "Norwegian Forest Cat", "Abyssinian", "Birman", "Mixed Breed", "Other"];
+
+  const createEmptyPet = () => ({
+    id: `pet-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    firstName: "",
+    lastName: "",
+    petName: "",
+    petType: "dog",
+    breed: "",
+    gender: "unknown",
+    birthday: "",
+    adoptionDate: "",
+    weightKg: "",
+    photoPath: "",
+  });
+
+  roots.forEach((root) => {
+    const appProxy = root.getAttribute("data-app-proxy") || "/apps/pet-portal";
+    const switcher = root.querySelector("[data-switcher]");
+    const actionToggle = root.querySelector("[data-action-toggle]");
+    const actionMenu = root.querySelector("[data-action-menu]");
+    const actionAdd = root.querySelector("[data-action-add]");
+    const actionEdit = root.querySelector("[data-action-edit]");
+    const actionDelete = root.querySelector("[data-action-delete]");
+    const card = root.querySelector("[data-card]");
+    const empty = root.querySelector("[data-empty]");
+    const note = root.querySelector("[data-note]");
+    const drawer = root.querySelector("[data-drawer]");
+    const drawerBackdrop = root.querySelector("[data-drawer-backdrop]");
+    const drawerTitle = root.querySelector("[data-drawer-title]");
+    const drawerClose = root.querySelector("[data-drawer-close]");
+    const dialog = root.querySelector("[data-dialog]");
+    const dialogBackdrop = root.querySelector("[data-dialog-backdrop]");
+    const dialogCancel = root.querySelector("[data-dialog-cancel]");
+    const dialogConfirm = root.querySelector("[data-dialog-confirm]");
+    const form = root.querySelector("[data-form]");
+    const submitLabel = root.querySelector("[data-submit-label]");
+    const photoInput = root.querySelector("[data-photo-input]");
+    const photoButton = root.querySelector("[data-photo-button]");
+    const photoName = root.querySelector("[data-photo-name]");
+
+    const fieldPetName = root.querySelector("[data-field='petName']");
+    const fieldPetType = root.querySelector("[data-field='petType']");
+    const fieldOwner = root.querySelector("[data-field='owner']");
+    const fieldBreed = root.querySelector("[data-field='breed']");
+    const fieldGender = root.querySelector("[data-field='gender']");
+    const fieldBirthday = root.querySelector("[data-field='birthday']");
+    const fieldAdoption = root.querySelector("[data-field='adoptionDate']");
+    const fieldWeight = root.querySelector("[data-field='weight']");
+    const photoPreview = root.querySelector("[data-photo-preview]");
+    const photoLetter = root.querySelector("[data-photo-letter]");
+
+    let pets = [];
+    let activeId = "";
+    let mode = "create";
+    let draft = createEmptyPet();
+    let selectedPhoto = null;
+    let loggedIn = true;
+
+    const showMessage = (text) => {
+      if (!note) return;
+      note.hidden = !text;
+      note.textContent = text || "";
+    };
+
+    const activePet = () => pets.find((pet) => pet.id === activeId) || pets[0] || null;
+
+    const postAction = async (fd) => {
+      const response = await fetch(appProxy, { method: "POST", body: fd });
+      const payload = await response.json().catch(() => null);
+      if (!payload) throw new Error("Unexpected server response.");
+      if (!response.ok || !payload.ok) throw new Error(payload.message || "Request failed.");
+      return payload;
+    };
+
+    const renderSwitcher = () => {
+      if (!switcher) return;
+      switcher.innerHTML = "";
+      pets.forEach((pet) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = pet.petName || "Unnamed pet";
+        if (pet.id === activeId) button.classList.add("active");
+        button.addEventListener("click", () => {
+          activeId = pet.id;
+          render();
+        });
+        switcher.appendChild(button);
+      });
+    };
+
+    const renderCard = () => {
+      const pet = activePet();
+      if (!pet) {
+        card.hidden = true;
+        empty.hidden = false;
+        empty.textContent = loggedIn
+          ? "No pet profiles yet. Use Action to add the first one."
+          : "Please sign in or create an account to manage your pet profile.";
+        return;
+      }
+
+      card.hidden = false;
+      empty.hidden = true;
+      fieldPetName.textContent = pet.petName || "Unnamed";
+      fieldPetType.textContent = pet.petType;
+      fieldOwner.textContent = `${pet.firstName} ${pet.lastName}`.trim() || "N/A";
+      fieldBreed.textContent = pet.breed || "N/A";
+      fieldGender.textContent = pet.gender || "N/A";
+      fieldBirthday.textContent = pet.birthday || "N/A";
+      fieldAdoption.textContent = pet.adoptionDate || "N/A";
+      fieldWeight.textContent = pet.weightKg ? `${pet.weightKg} kg` : "N/A";
+
+      if (pet.photoDataUrl) {
+        photoPreview.src = pet.photoDataUrl;
+        photoPreview.hidden = false;
+        photoLetter.hidden = true;
+      } else {
+        photoPreview.hidden = true;
+        photoLetter.hidden = false;
+        photoLetter.textContent = (pet.petName || "P").slice(0, 1);
+      }
+    };
+
+    const render = () => {
+      renderSwitcher();
+      renderCard();
+      const pet = activePet();
+      actionToggle.disabled = !loggedIn;
+      actionEdit.disabled = !loggedIn || !pet;
+      actionDelete.disabled = !loggedIn || !pet;
+    };
+
+    const refreshPets = async () => {
+      empty.hidden = false;
+      empty.textContent = "Loading pet profiles...";
+      try {
+        const fd = new FormData();
+        fd.set("intent", "list");
+        const data = await postAction(fd);
+        pets = data.pets || [];
+        activeId = pets.find((pet) => pet.id === activeId)?.id || pets[0]?.id || "";
+        loggedIn = true;
+        render();
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "Failed to load pet profiles.";
+        loggedIn = !msg.toLowerCase().includes("sign in");
+        pets = [];
+        activeId = "";
+        showMessage(msg);
+        render();
+      }
+    };
+
+    const setDrawerOpen = (open) => {
+      drawer.classList.toggle("open", open);
+      drawerBackdrop.classList.toggle("open", open);
+    };
+
+    const setDialogOpen = (open) => {
+      dialog.hidden = !open;
+      dialogBackdrop.classList.toggle("open", open);
+    };
+
+    const setBreedOptions = () => {
+      const breed = form.querySelector("[name='breed']");
+      const type = form.querySelector("[name='petType']").value;
+      const options = type === "dog" ? dogBreeds : type === "cat" ? catBreeds : [];
+      breed.innerHTML = "";
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = type === "other" ? "Not applicable" : "Please select";
+      breed.appendChild(placeholder);
+
+      if (type === "other") {
+        breed.disabled = true;
+      } else {
+        breed.disabled = false;
+        options.forEach((item) => {
+          const opt = document.createElement("option");
+          opt.value = item;
+          opt.textContent = item;
+          breed.appendChild(opt);
+        });
+      }
+
+      breed.value = draft.breed || "";
+    };
+
+    const bindDraftToForm = () => {
+      form.querySelector("[name='firstName']").value = draft.firstName || "";
+      form.querySelector("[name='lastName']").value = draft.lastName || "";
+      form.querySelector("[name='petName']").value = draft.petName || "";
+      form.querySelector("[name='petType']").value = draft.petType || "dog";
+      form.querySelector("[name='gender']").value = draft.gender || "unknown";
+      form.querySelector("[name='birthday']").value = draft.birthday || "";
+      form.querySelector("[name='adoptionDate']").value = draft.adoptionDate || "";
+      form.querySelector("[name='weightKg']").value = draft.weightKg || "";
+      setBreedOptions();
+      photoName.textContent = draft.photoPath ? "Current photo attached" : "";
+      selectedPhoto = null;
+      photoInput.value = "";
+    };
+
+    actionToggle.addEventListener("click", () => {
+      actionMenu.hidden = !actionMenu.hidden;
+    });
+
+    actionAdd.addEventListener("click", () => {
+      mode = "create";
+      draft = createEmptyPet();
+      drawerTitle.textContent = "Add a new pet";
+      submitLabel.textContent = "Save profile";
+      actionMenu.hidden = true;
+      bindDraftToForm();
+      setDrawerOpen(true);
+    });
+
+    actionEdit.addEventListener("click", () => {
+      const pet = activePet();
+      if (!pet) return;
+      mode = "edit";
+      draft = { ...pet };
+      drawerTitle.textContent = "Edit pet";
+      submitLabel.textContent = "Update profile";
+      actionMenu.hidden = true;
+      bindDraftToForm();
+      setDrawerOpen(true);
+    });
+
+    actionDelete.addEventListener("click", () => {
+      actionMenu.hidden = true;
+      setDialogOpen(true);
+    });
+
+    drawerClose.addEventListener("click", () => setDrawerOpen(false));
+    drawerBackdrop.addEventListener("click", () => setDrawerOpen(false));
+
+    dialogCancel.addEventListener("click", () => setDialogOpen(false));
+    dialogBackdrop.addEventListener("click", () => setDialogOpen(false));
+
+    dialogConfirm.addEventListener("click", async () => {
+      const pet = activePet();
+      if (!pet) return;
+      try {
+        const fd = new FormData();
+        fd.set("intent", "delete");
+        fd.set("id", pet.id);
+        fd.set("photoPath", pet.photoPath || "");
+        await postAction(fd);
+        showMessage("Pet profile removed.");
+        setDialogOpen(false);
+        await refreshPets();
+      } catch (error) {
+        showMessage(error instanceof Error ? error.message : "Failed to delete pet profile.");
+      }
+    });
+
+    form.querySelector("[name='petType']").addEventListener("change", (event) => {
+      draft.petType = event.target.value;
+      draft.breed = "";
+      setBreedOptions();
+    });
+
+    photoButton.addEventListener("click", () => photoInput.click());
+
+    photoInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      selectedPhoto = file;
+      photoName.textContent = file.name;
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const fd = new FormData(form);
+      fd.set("intent", "save");
+      fd.set("mode", mode);
+      fd.set("id", mode === "edit" ? draft.id : createEmptyPet().id);
+      fd.set("photoPath", draft.photoPath || "");
+      fd.set("pageUrl", window.location.href);
+      if (selectedPhoto) fd.set("photo", selectedPhoto);
+
+      try {
+        const data = await postAction(fd);
+        showMessage(data.message || (mode === "create" ? "New pet profile added." : "Pet profile updated."));
+        setDrawerOpen(false);
+        await refreshPets();
+      } catch (error) {
+        showMessage(error instanceof Error ? error.message : "Failed to save pet profile.");
+      }
+    });
+
+    form.addEventListener("reset", () => {
+      draft = createEmptyPet();
+      setTimeout(bindDraftToForm, 0);
+    });
+
+    refreshPets();
+  });
+})();
