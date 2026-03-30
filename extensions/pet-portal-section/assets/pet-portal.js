@@ -2,6 +2,8 @@
   const roots = document.querySelectorAll("[data-pet-portal]");
   if (!roots.length) return;
   const DEBUG = true;
+  const allowedPhotoExtensions = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
+  const maxPhotoBytes = 900 * 1024;
 
   const dogBreeds = ["Labrador Retriever", "Golden Retriever", "German Shepherd", "Border Collie", "Cocker Spaniel", "Springer Spaniel", "French Bulldog", "Bulldog", "Beagle", "Dachshund", "Poodle", "Cockapoo", "Labradoodle", "Cavapoo", "Cavalier King Charles Spaniel", "Staffordshire Bull Terrier", "Chihuahua", "Pomeranian", "Siberian Husky", "Corgi", "Mixed Breed", "Other"];
   const catBreeds = ["British Shorthair", "Ragdoll", "Maine Coon", "Persian", "Siamese", "Bengal", "Sphynx", "Scottish Fold", "Russian Blue", "Norwegian Forest Cat", "Abyssinian", "Birman", "Mixed Breed", "Other"];
@@ -32,6 +34,7 @@
     const actionDelete = root.querySelector("[data-action-delete]");
     const card = root.querySelector("[data-card]");
     const empty = root.querySelector("[data-empty]");
+    const globalMessage = root.querySelector("[data-global-message]");
     const note = root.querySelector("[data-note]");
     const drawer = root.querySelector("[data-drawer]");
     const drawerBackdrop = root.querySelector("[data-drawer-backdrop]");
@@ -64,6 +67,7 @@
     let draft = createEmptyPet();
     let selectedPhoto = null;
     let loggedIn = true;
+    let globalMessageTimer = null;
 
     const portalToBody = (element) => {
       if (!element || element.dataset.portalMounted === "true") return;
@@ -71,10 +75,36 @@
       element.dataset.portalMounted = "true";
     };
 
-    const showMessage = (text) => {
+    const showInlineMessage = (text) => {
       if (!note) return;
       note.hidden = !text;
       note.textContent = text || "";
+    };
+
+    const clearGlobalMessage = () => {
+      if (!globalMessage) return;
+      if (globalMessageTimer) {
+        clearTimeout(globalMessageTimer);
+        globalMessageTimer = null;
+      }
+      globalMessage.hidden = true;
+      globalMessage.textContent = "";
+      globalMessage.classList.remove("is-success", "is-error");
+    };
+
+    const showGlobalMessage = (text, type) => {
+      if (!globalMessage || !text) return;
+      if (globalMessageTimer) {
+        clearTimeout(globalMessageTimer);
+      }
+      globalMessage.hidden = false;
+      globalMessage.textContent = text;
+      globalMessage.classList.remove("is-success", "is-error");
+      globalMessage.classList.add(type === "success" ? "is-success" : "is-error");
+      const ttl = type === "success" ? 3000 : 6000;
+      globalMessageTimer = setTimeout(() => {
+        clearGlobalMessage();
+      }, ttl);
     };
 
     const activePet = () => pets.find((pet) => pet.id === activeId) || pets[0] || null;
@@ -86,6 +116,13 @@
         reader.onerror = () => reject(new Error("Failed to read selected photo."));
         reader.readAsDataURL(file);
       });
+
+    const createApiError = (message, code, requestId) => {
+      const error = new Error(message || "Request failed.");
+      error.code = code || "";
+      error.requestId = requestId || "";
+      return error;
+    };
 
     const postAction = async (fd) => {
       if (DEBUG) {
@@ -161,7 +198,11 @@
       if (!response.ok || !payload.ok) {
         const codeText = payload.code ? ` [code: ${payload.code}]` : "";
         const reqIdText = payload.requestId || requestIdHeader ? ` [requestId: ${payload.requestId || requestIdHeader}]` : "";
-        throw new Error(`${payload.message || "Request failed."}${codeText}${reqIdText}`);
+        throw createApiError(
+          `${payload.message || "Request failed."}${codeText}${reqIdText}`,
+          payload.code || "",
+          payload.requestId || requestIdHeader || "",
+        );
       }
       return payload;
     };
@@ -240,7 +281,7 @@
         loggedIn = !msg.toLowerCase().includes("sign in");
         pets = [];
         activeId = "";
-        showMessage(msg);
+        showGlobalMessage(msg, "error");
         render();
       }
     };
@@ -345,11 +386,11 @@
         fd.set("id", pet.id);
         fd.set("photoPath", pet.photoPath || "");
         await postAction(fd);
-        showMessage("Pet profile removed.");
+        showGlobalMessage("Pet profile removed.", "success");
         setDialogOpen(false);
         await refreshPets();
       } catch (error) {
-        showMessage(error instanceof Error ? error.message : "Failed to delete pet profile.");
+        showGlobalMessage(error instanceof Error ? error.message : "Failed to delete pet profile.", "error");
       }
     });
 
@@ -364,32 +405,79 @@
     photoInput.addEventListener("change", (event) => {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
+      const extension = file.name.includes(".") ? file.name.split(".").pop().toLowerCase() : "";
+      if (!allowedPhotoExtensions.has(extension)) {
+        selectedPhoto = null;
+        photoInput.value = "";
+        photoName.textContent = "";
+        showInlineMessage("Only .jpg, .jpeg, .png, .gif, and .webp image formats are allowed.");
+        return;
+      }
+      if (file.size >= maxPhotoBytes) {
+        selectedPhoto = null;
+        photoInput.value = "";
+        photoName.textContent = "";
+        showInlineMessage("Image size must be smaller than 900KB.");
+        return;
+      }
       selectedPhoto = file;
       photoName.textContent = file.name;
+      showInlineMessage("");
     });
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const fd = new FormData(form);
-      fd.set("intent", "save");
-      fd.set("mode", mode);
-      fd.set("id", mode === "edit" ? draft.id : createEmptyPet().id);
-      fd.set("photoPath", draft.photoPath || "");
-      fd.set("pageUrl", window.location.href);
-      if (selectedPhoto) {
-        fd.set("photo", selectedPhoto);
-        fd.set("photoFileName", selectedPhoto.name || "photo.jpg");
-        fd.set("photoMimeType", selectedPhoto.type || "application/octet-stream");
-        fd.set("photoBase64", await fileToDataUrl(selectedPhoto));
-      }
+      const buildSaveFormData = async (withBase64) => {
+        const fd = new FormData(form);
+        fd.set("intent", "save");
+        fd.set("mode", mode);
+        fd.set("id", mode === "edit" ? draft.id : createEmptyPet().id);
+        fd.set("photoPath", draft.photoPath || "");
+        fd.set("pageUrl", window.location.href);
+        if (selectedPhoto) {
+          const extension = selectedPhoto.name.includes(".") ? selectedPhoto.name.split(".").pop().toLowerCase() : "";
+          if (!allowedPhotoExtensions.has(extension)) {
+            showInlineMessage("Only .jpg, .jpeg, .png, .gif, and .webp image formats are allowed.");
+            return null;
+          }
+          if (selectedPhoto.size >= maxPhotoBytes) {
+            showInlineMessage("Image size must be smaller than 900KB.");
+            return null;
+          }
+          fd.set("photo_selected", "1");
+          fd.set("photo", selectedPhoto);
+          fd.set("photoFileName", selectedPhoto.name || "photo.jpg");
+          fd.set("photoMimeType", selectedPhoto.type || "application/octet-stream");
+          if (withBase64) {
+            fd.set("photoBase64", await fileToDataUrl(selectedPhoto));
+          }
+        }
+        return fd;
+      };
 
       try {
-        const data = await postAction(fd);
-        showMessage(data.message || (mode === "create" ? "New pet profile added." : "Pet profile updated."));
+        const primaryFd = await buildSaveFormData(false);
+        if (!primaryFd) return;
+
+        let data;
+        try {
+          data = await postAction(primaryFd);
+        } catch (error) {
+          const code = error && typeof error === "object" ? error.code : "";
+          const shouldRetryWithBase64 = selectedPhoto && (code === "PHOTO_UPLOAD_FAILED" || code === "PHOTO_UPLOAD_MISSING");
+          if (!shouldRetryWithBase64) throw error;
+
+          const retryFd = await buildSaveFormData(true);
+          if (!retryFd) return;
+          data = await postAction(retryFd);
+        }
+
+        showGlobalMessage(data.message || (mode === "create" ? "New pet profile added." : "Pet profile updated."), "success");
+        showInlineMessage("");
         setDrawerOpen(false);
         await refreshPets();
       } catch (error) {
-        showMessage(error instanceof Error ? error.message : "Failed to save pet profile.");
+        showGlobalMessage(error instanceof Error ? error.message : "Failed to save pet profile.", "error");
       }
     });
 

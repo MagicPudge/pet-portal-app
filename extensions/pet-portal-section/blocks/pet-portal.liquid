@@ -8,6 +8,8 @@
   data-app-proxy-api="{{ routes.root_url }}apps/pet-portal/api"
   data-customer-id="{{ customer.id | default: '' }}"
 >
+  <div class="pet-portal-global-message" data-global-message hidden></div>
+
   <section class="hero">
     <img class="brand-logo" src="{{ 'poppypawz.svg' | asset_url }}" alt="PoppyPawz" loading="lazy" />
     <h1>Welcome to the PoppyPawz pet community</h1>

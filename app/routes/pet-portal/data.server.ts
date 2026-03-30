@@ -104,48 +104,82 @@ const supabaseHeaders = (serviceRoleKey: string) => ({
   Authorization: `Bearer ${serviceRoleKey}`,
 });
 
+const buildPathCandidates = (path: string, bucket: string) => {
+  const trimmed = String(path || "").trim().replace(/^\/+/, "");
+  if (!trimmed) return [] as string[];
+
+  const candidates: string[] = [trimmed];
+  if (trimmed.startsWith(`${bucket}/`)) {
+    const stripped = trimmed.slice(bucket.length + 1);
+    if (stripped) candidates.push(stripped);
+  }
+  return Array.from(new Set(candidates));
+};
+
+const arePathsEquivalent = (a: string, b: string, bucket: string) => {
+  const setA = new Set(buildPathCandidates(a, bucket));
+  const setB = new Set(buildPathCandidates(b, bucket));
+  for (const item of setA) {
+    if (setB.has(item)) return true;
+  }
+  return false;
+};
+
 const encodeStoragePath = (path: string) =>
   path
     .split("/")
     .map((part) => encodeURIComponent(part))
     .join("/");
 
-const buildPublicPhotoUrl = (supabaseUrl: string, supabaseBucket: string, path: string) =>
-  `${supabaseUrl}/storage/v1/object/public/${supabaseBucket}/${encodeStoragePath(path)}`;
+const buildPublicPhotoUrl = (supabaseUrl: string, supabaseBucket: string, path: string) => {
+  const candidates = buildPathCandidates(path, supabaseBucket);
+  if (!candidates.length) return "";
+  return `${supabaseUrl}/storage/v1/object/public/${supabaseBucket}/${encodeStoragePath(candidates[0])}`;
+};
 
 const toAbsoluteStorageUrl = (supabaseUrl: string, value: string) => {
   if (/^https?:\/\//i.test(value)) return value;
-  return `${supabaseUrl}${value.startsWith("/") ? "" : "/"}${value}`;
+  const normalized = value.startsWith("/") ? value : `/${value}`;
+  if (normalized.startsWith("/storage/v1/")) {
+    return `${supabaseUrl}${normalized}`;
+  }
+  if (normalized.startsWith("/object/")) {
+    return `${supabaseUrl}/storage/v1${normalized}`;
+  }
+  return `${supabaseUrl}${normalized}`;
 };
 
 const createSignedPhotoUrl = async (config: SupabaseConfig, path: string) => {
-  const response = await fetch(`${config.url}/storage/v1/object/sign/${config.bucket}/${encodeStoragePath(path)}`, {
-    method: "POST",
-    headers: {
-      ...supabaseHeaders(config.serviceRoleKey),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ expiresIn: 60 * 60 * 24 * 7 }),
-  });
-  if (!response.ok) {
-    const detail = await readSupabaseErrorMessage(response, "Failed to create signed URL.");
-    console.warn("[PetPortal][photo-sign-url-failed]", {
-      status: response.status,
-      detail,
-      bucket: config.bucket,
-      path,
-    });
-    return null;
+  const candidates = buildPathCandidates(path, config.bucket);
+  if (!candidates.length) return null;
+
+  type SignedUrlBody = { signedURL?: string; signedUrl?: string };
+
+  for (const candidate of candidates) {
+    const response = await fetch(
+      `${config.url}/storage/v1/object/sign/${config.bucket}/${encodeStoragePath(candidate)}`,
+      {
+        method: "POST",
+        headers: {
+          ...supabaseHeaders(config.serviceRoleKey),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ expiresIn: 60 * 60 * 24 * 7 }),
+      },
+    );
+    if (!response.ok) continue;
+
+    const payload = (await response.json().catch(() => ({}))) as SignedUrlBody;
+    const signed = payload.signedURL || payload.signedUrl;
+    if (signed) return toAbsoluteStorageUrl(config.url, signed);
   }
 
-  type SignedUrlBody = {
-    signedURL?: string;
-    signedUrl?: string;
-  };
-  const payload = (await response.json().catch(() => ({}))) as SignedUrlBody;
-  const signed = payload.signedURL || payload.signedUrl;
-  if (!signed) return null;
-  return toAbsoluteStorageUrl(config.url, signed);
+  console.warn("[PetPortal][photo-sign-url-failed]", {
+    bucket: config.bucket,
+    path,
+    candidates,
+  });
+  return null;
 };
 
 const mapRowToPet = (row: PetProfileRow, photoDataUrl: string): PetProfile => ({
@@ -165,11 +199,46 @@ const mapRowToPet = (row: PetProfileRow, photoDataUrl: string): PetProfile => ({
 
 const sanitizePathSegment = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "-");
 
-const createStoragePath = (shopDomain: string, customerId: string, fileName: string) => {
+const getFileExtension = (fileName: string) => {
+  const trimmed = fileName.trim();
+  const lastDot = trimmed.lastIndexOf(".");
+  if (lastDot <= 0 || lastDot === trimmed.length - 1) return "";
+  return trimmed.slice(lastDot + 1).toLowerCase();
+};
+
+const normalizeImageExtension = (extension: string) => {
+  const ext = extension.trim().toLowerCase();
+  if (ext === "jpg" || ext === "jpeg") return "jpg";
+  if (ext === "png") return "png";
+  if (ext === "gif") return "gif";
+  if (ext === "webp") return "webp";
+  return "";
+};
+
+const inferExtensionFromMime = (mimeType: string) => {
+  const mime = mimeType.trim().toLowerCase();
+  if (mime === "image/jpeg" || mime === "image/jpg") return "jpg";
+  if (mime === "image/png") return "png";
+  if (mime === "image/gif") return "gif";
+  if (mime === "image/webp") return "webp";
+  return "";
+};
+
+const resolveAllowedImageExtension = (fileNameHint: string, mimeTypeHint: string) => {
+  const fromName = normalizeImageExtension(getFileExtension(fileNameHint));
+  if (fromName) return fromName;
+  const fromMime = inferExtensionFromMime(mimeTypeHint);
+  if (fromMime) return fromMime;
+  throw new PetPortalDataError("BAD_PHOTO_FORMAT", "Only .jpg, .jpeg, .png, .gif, and .webp image formats are allowed.", 400);
+};
+
+const maxPhotoBytes = 900 * 1024;
+
+const createStoragePath = (shopDomain: string, customerId: string, petName: string, extension: string) => {
   const safeShopDomain = sanitizePathSegment(shopDomain);
   const safeCustomerId = sanitizePathSegment(customerId);
-  const safeFileName = sanitizePathSegment(fileName);
-  return `pet-photos/${safeShopDomain}/${safeCustomerId}/${Date.now()}-${safeFileName}`;
+  const safePetName = sanitizePathSegment(petName) || "pet";
+  return `${safeShopDomain}/${safeCustomerId}/${safePetName}.${extension}`;
 };
 
 const uploadPhotoObject = async (
@@ -204,7 +273,44 @@ const readPhotoBase64Payload = (formData: FormData) => {
   if (!body.byteLength) {
     throw new PetPortalDataError("BAD_PHOTO_PAYLOAD", "Photo payload is empty.", 400);
   }
+  if (body.byteLength >= maxPhotoBytes) {
+    throw new PetPortalDataError("PHOTO_TOO_LARGE", "Photo size must be smaller than 900KB.", 400);
+  }
   return { body, mimeTypeHint, fileNameHint };
+};
+
+const ensureUniquePetName = async (
+  config: SupabaseConfig,
+  shopDomain: string,
+  customerId: string,
+  petName: string,
+  currentId?: string,
+) => {
+  const query = new URLSearchParams({
+    select: "id",
+    shop_domain: `eq.${shopDomain}`,
+    customer_id: `eq.${customerId}`,
+    pet_name: `eq.${petName}`,
+  });
+  const response = await fetch(`${config.url}/rest/v1/pet_profiles?${query.toString()}`, {
+    headers: {
+      ...supabaseHeaders(config.serviceRoleKey),
+      "Accept-Profile": config.schema,
+    },
+  });
+  if (!response.ok) {
+    await throwSupabaseError(response, "Failed to validate pet name uniqueness.", "PET_NAME_CHECK_FAILED");
+  }
+
+  const rows = (await response.json()) as Array<{ id: string }>;
+  const exists = rows.some((row) => row.id && row.id !== currentId);
+  if (exists) {
+    throw new PetPortalDataError(
+      "DUPLICATE_PET_NAME",
+      "A pet with the same name already exists for this account. Please use a different pet name.",
+      400,
+    );
+  }
 };
 
 export const listPets = async (config: SupabaseConfig, shopDomain: string, customerId: string) => {
@@ -258,8 +364,9 @@ export const deletePet = async (
     await throwSupabaseError(response, "Failed to delete pet profile.", "DELETE_PET_FAILED");
   }
 
-  if (photoPath) {
-    await fetch(`${config.url}/storage/v1/object/${config.bucket}/${encodeStoragePath(photoPath)}`, {
+  const candidates = buildPathCandidates(photoPath || "", config.bucket);
+  for (const candidate of candidates) {
+    await fetch(`${config.url}/storage/v1/object/${config.bucket}/${encodeStoragePath(candidate)}`, {
       method: "DELETE",
       headers: supabaseHeaders(config.serviceRoleKey),
     }).catch(() => undefined);
@@ -276,13 +383,20 @@ export const savePet = async (
   const id = String(formData.get("id") ?? "");
   const petName = String(formData.get("petName") ?? "").trim();
   if (!petName) throw new Error("Please enter a pet name.");
+  await ensureUniquePetName(config, shopDomain, customerId, petName, mode === "edit" ? id : undefined);
 
-  let photoPath = String(formData.get("photoPath") ?? "");
+  const previousPhotoPath = String(formData.get("photoPath") ?? "").trim().replace(/^\/+/, "");
+  let photoPath = previousPhotoPath;
+  const photoSelected = String(formData.get("photo_selected") ?? "").trim() === "1";
   const photoFile = formData.get("photo");
   const base64Payload = readPhotoBase64Payload(formData);
 
   if (photoFile instanceof File && photoFile.size > 0) {
-    const nextPhotoPath = createStoragePath(shopDomain, customerId, photoFile.name);
+    if (photoFile.size >= maxPhotoBytes) {
+      throw new PetPortalDataError("PHOTO_TOO_LARGE", "Photo size must be smaller than 900KB.", 400);
+    }
+    const extension = resolveAllowedImageExtension(photoFile.name || "", photoFile.type || "");
+    const nextPhotoPath = createStoragePath(shopDomain, customerId, petName, extension);
     await uploadPhotoObject(
       config,
       nextPhotoPath,
@@ -291,9 +405,12 @@ export const savePet = async (
     );
     photoPath = nextPhotoPath;
   } else if (base64Payload) {
-    const nextPhotoPath = createStoragePath(shopDomain, customerId, base64Payload.fileNameHint);
+    const extension = resolveAllowedImageExtension(base64Payload.fileNameHint, base64Payload.mimeTypeHint);
+    const nextPhotoPath = createStoragePath(shopDomain, customerId, petName, extension);
     await uploadPhotoObject(config, nextPhotoPath, base64Payload.body, base64Payload.mimeTypeHint);
     photoPath = nextPhotoPath;
+  } else if (photoSelected) {
+    throw new PetPortalDataError("PHOTO_UPLOAD_MISSING", "Photo upload payload is missing. Please retry.", 400);
   }
 
   const payload = {
@@ -335,6 +452,17 @@ export const savePet = async (
   const rows = (await response.json()) as PetProfileRow[];
   const saved = rows[0];
   if (!saved) throw new PetPortalDataError("SAVE_PET_EMPTY_RESULT", "Failed to save pet profile.", 502);
+  if (previousPhotoPath && photoPath && !arePathsEquivalent(previousPhotoPath, photoPath, config.bucket)) {
+    const candidates = buildPathCandidates(previousPhotoPath, config.bucket);
+    const activeCandidates = new Set(buildPathCandidates(photoPath, config.bucket));
+    for (const candidate of candidates) {
+      if (activeCandidates.has(candidate)) continue;
+      await fetch(`${config.url}/storage/v1/object/${config.bucket}/${encodeStoragePath(candidate)}`, {
+        method: "DELETE",
+        headers: supabaseHeaders(config.serviceRoleKey),
+      }).catch(() => undefined);
+    }
+  }
   const photoDataUrl = saved.photo_path
     ? (await createSignedPhotoUrl(config, saved.photo_path)) || buildPublicPhotoUrl(config.url, config.bucket, saved.photo_path)
     : "";
