@@ -1,6 +1,13 @@
 {{ 'pet-portal.css' | asset_url | stylesheet_tag }}
 
-<div class="pet-portal" data-pet-portal data-app-proxy="https://{{ shop.permanent_domain }}/apps/pet-portal">
+<div class="pet-portal-section">
+<div
+  class="pet-portal"
+  data-pet-portal
+  data-app-proxy="{{ routes.root_url }}apps/pet-portal"
+  data-app-proxy-api="{{ routes.root_url }}apps/pet-portal/api"
+  data-customer-id="{{ customer.id | default: '' }}"
+>
   <section class="hero">
     <img class="brand-logo" src="{{ 'poppypawz.svg' | asset_url }}" alt="PoppyPawz" loading="lazy" />
     <h1>Welcome to the PoppyPawz pet community</h1>
@@ -11,8 +18,8 @@
     <div class="hero-footer">
       <div class="switcher" data-switcher></div>
       <div class="actions">
-        <button class="button secondary" type="button" data-action-toggle>Action</button>
-        <div class="menu" data-action-menu hidden>
+        <button class="pp-btn pp-btn--secondary" type="button" data-action-toggle>Action</button>
+        <div class="pet-portal-menu" data-action-menu hidden>
           <button class="menu-item" type="button" data-action-add>Add new pet</button>
           <button class="menu-item" type="button" data-action-edit>Edit current pet</button>
           <button class="menu-item danger" type="button" data-action-delete>Delete current pet</button>
@@ -46,20 +53,20 @@
     </article>
   </section>
 
-  <div class="drawer-backdrop" data-drawer-backdrop></div>
-  <aside class="drawer" data-drawer>
-    <div class="drawer-head">
+  <div class="pet-portal-drawer-backdrop" data-drawer-backdrop hidden></div>
+  <aside class="pet-portal-drawer" data-drawer hidden>
+    <div class="pet-portal-drawer-head">
       <h2 data-drawer-title>Add a new pet</h2>
-      <button class="close" type="button" data-drawer-close>x</button>
+      <button class="pet-portal-close" type="button" data-drawer-close>x</button>
     </div>
 
     <form data-form>
-      <label>First Name<input type="text" name="firstName" placeholder="First Name" /></label>
-      <label>Last Name<input type="text" name="lastName" placeholder="Last Name" /></label>
-      <label>Pet Name *<input type="text" name="petName" required placeholder="Pet name *" /></label>
+      <label>First Name<input class="pp-field" type="text" name="firstName" placeholder="First Name" /></label>
+      <label>Last Name<input class="pp-field" type="text" name="lastName" placeholder="Last Name" /></label>
+      <label>Pet Name *<input class="pp-field" type="text" name="petName" required placeholder="Pet name *" /></label>
       <label>
         Pet Type *
-        <select name="petType">
+        <select class="pp-field" name="petType">
           <option value="dog">Dog</option>
           <option value="cat">Cat</option>
           <option value="other">Other</option>
@@ -67,46 +74,47 @@
       </label>
       <label>
         Gender
-        <select name="gender">
+        <select class="pp-field" name="gender">
           <option value="female">Female</option>
           <option value="male">Male</option>
           <option value="unknown">Unknown</option>
         </select>
       </label>
-      <label>Breed<select name="breed"></select></label>
-      <label>Birthday<input type="date" name="birthday" /></label>
-      <label>Adoption Date<input type="date" name="adoptionDate" /></label>
-      <label>Weight (kg)<input type="number" min="0" max="200" step="0.1" name="weightKg" placeholder="Weight (kg)" /></label>
+      <label>Breed<select class="pp-field" name="breed"></select></label>
+      <label>Birthday<input class="pp-field" type="date" name="birthday" /></label>
+      <label>Adoption Date<input class="pp-field" type="date" name="adoptionDate" /></label>
+      <label>Weight (kg)<input class="pp-field" type="number" min="0" max="200" step="0.1" name="weightKg" placeholder="Weight (kg)" /></label>
       <div class="span-2 file-box">
         <label class="upload-label">
           <span class="upload-cloud">CLOUD</span>
           <span class="upload-title">Pet photo (optional)</span>
-          <button class="button upload-trigger" type="button" data-photo-button>Browse for images</button>
+          <button class="pp-btn upload-trigger" type="button" data-photo-button>Browse for images</button>
           <input class="file-input-hidden" type="file" accept="image/*" data-photo-input />
           <span class="upload-hint">Max 5MB. JPG/PNG/WebP recommended.</span>
           <span class="upload-name" data-photo-name></span>
         </label>
       </div>
       <div class="span-2 row-actions">
-        <button class="button secondary" type="reset">Reset</button>
-        <button class="button" type="submit" data-submit-label>Save profile</button>
+        <button class="pp-btn pp-btn--secondary" type="reset">Reset</button>
+        <button class="pp-btn" type="submit" data-submit-label>Save profile</button>
       </div>
     </form>
 
     <div class="note" data-note hidden></div>
   </aside>
 
-  <div class="dialog-backdrop" data-dialog-backdrop></div>
-  <div class="dialog" data-dialog hidden>
-    <div class="dialog-card">
+  <div class="pet-portal-dialog-backdrop" data-dialog-backdrop hidden></div>
+  <div class="pet-portal-dialog" data-dialog hidden>
+    <div class="pet-portal-dialog-card">
       <h3>Delete pet profile?</h3>
       <p>This action cannot be undone.</p>
       <div class="row-actions">
-        <button class="button secondary" type="button" data-dialog-cancel>Cancel</button>
-        <button class="button danger" type="button" data-dialog-confirm>Delete</button>
+        <button class="pp-btn pp-btn--secondary" type="button" data-dialog-cancel>Cancel</button>
+        <button class="pp-btn pp-btn--danger" type="button" data-dialog-confirm>Delete</button>
       </div>
     </div>
   </div>
+</div>
 </div>
 
 {{ 'pet-portal.js' | asset_url | script_tag }}

@@ -2,8 +2,8 @@ import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "re
 import { handlePetPortalAction, handlePetPortalLoader, petPortalHeaders } from "./pet-portal/proxy.server";
 
 const routeConfig = {
-  routeTag: "proxy.pet-portal",
-  routePath: "/apps/pet-portal",
+  routeTag: "proxy.pet-portal.api",
+  routePath: "/apps/pet-portal/api",
   apiPath: "/apps/pet-portal/api",
 } as const;
 
