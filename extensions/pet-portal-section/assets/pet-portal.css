@@ -1,5 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
 
+:root {
+  --pp-blue: #3c98de;
+  --pp-blue-strong: #2e86cb;
+  --pp-blue-soft: #64afe7;
+  --pp-yellow: #ecd34f;
+  --pp-yellow-strong: #dfc53e;
+  --pp-cream: #f5ecdc;
+  --pp-cream-soft: #fbf6ec;
+  --pp-ink: #0e2338;
+  --pp-ink-soft: #244762;
+  --pp-surface: #fffdf8;
+  --pp-border: rgba(14, 35, 56, 0.18);
+  --pp-shadow: rgba(14, 35, 56, 0.18);
+}
+
 .pet-portal-section {
   width: 100vw;
   max-width: 100vw;
@@ -7,6 +22,7 @@
   margin-right: calc(50% - 50vw);
   padding: clamp(8px, 1.6vw, 24px);
   box-sizing: border-box;
+  background: linear-gradient(180deg, #f8f3e8 0%, #f3e7cf 100%);
 }
 
 .pet-portal {
@@ -14,11 +30,18 @@
   max-width: 1600px;
   margin: 0 auto;
   font-family: "Poppins", "Trebuchet MS", sans-serif;
-  color: #111;
-  background: #f4f4f4;
-  border: 1px solid rgba(17, 17, 17, 0.1);
+  color: var(--pp-ink);
+  background: radial-gradient(
+    circle at center,
+    #e7f4ff 0%,
+    #9ed0f2 48%,
+    #5daee7 74%,
+    #2f8fd8 100%
+  );
+  border: none;
   border-radius: 24px;
   padding: 18px;
+  box-shadow: 0 14px 28px rgba(36, 86, 132, 0.16);
 }
 
 .pet-portal .pet-portal-global-message {
@@ -31,21 +54,21 @@
   font-size: 13px;
   font-weight: 600;
   border: 1px solid transparent;
-  box-shadow: 0 10px 30px rgba(17, 17, 17, 0.15);
+  box-shadow: 0 10px 30px var(--pp-shadow);
   z-index: 2147483700;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 
 .pet-portal .pet-portal-global-message.is-success {
-  background: #eaf8ef;
-  color: #1c5b2e;
+  background: #e4f5ea;
+  color: #184f2a;
   border-color: rgba(28, 91, 46, 0.22);
 }
 
 .pet-portal .pet-portal-global-message.is-error {
-  background: #fdecec;
-  color: #8f1f1f;
+  background: #fae7e7;
+  color: #7f1b1b;
   border-color: rgba(143, 31, 31, 0.28);
 }
 
@@ -54,12 +77,17 @@
 }
 
 .pet-portal .hero {
-  background: radial-gradient(circle at top center, rgba(255, 255, 255, 0.95), transparent 40%),
-    linear-gradient(180deg, #f8f8f8 0%, #f2f2f2 100%);
-  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: #ffffff;
+  border: 2px solid rgba(100, 175, 231, 0.7);
   border-radius: 18px;
   padding: 24px 24px 18px;
   text-align: center;
+}
+
+.pet-portal .card-wrap {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 10px;
 }
 
 .pet-portal .brand-logo {
@@ -82,7 +110,7 @@
   max-width: 680px;
   font-size: 14px;
   line-height: 1.7;
-  color: #606060;
+  color: rgba(14, 35, 56, 0.86);
 }
 
 .pet-portal .hero-footer {
@@ -110,8 +138,8 @@
   font-weight: 700 !important;
   line-height: 1.2 !important;
   cursor: pointer !important;
-  background: #111 !important;
-  color: #fff !important;
+  background: var(--pp-yellow) !important;
+  color: var(--pp-ink) !important;
   box-shadow: none !important;
   text-transform: none !important;
   font-family: "Poppins", "Trebuchet MS", sans-serif !important;
@@ -127,9 +155,9 @@
 .pet-portal .pp-btn--secondary,
 .pet-portal-drawer .pp-btn--secondary,
 .pet-portal-dialog .pp-btn--secondary {
-  background: #fff !important;
-  color: #111 !important;
-  border: 1px solid rgba(17, 17, 17, 0.22) !important;
+  background: var(--pp-surface) !important;
+  color: var(--pp-ink) !important;
+  border: 1px solid var(--pp-border) !important;
 }
 
 .pet-portal .pp-btn--danger,
@@ -188,10 +216,10 @@
   right: 0;
   top: calc(100% + 10px);
   min-width: 220px;
-  background: #fff;
-  border: 1px solid rgba(17, 17, 17, 0.14);
+  background: var(--pp-cream-soft);
+  border: 1px solid var(--pp-border);
   border-radius: 14px;
-  box-shadow: 0 14px 28px rgba(17, 17, 17, 0.08);
+  box-shadow: 0 14px 28px var(--pp-shadow);
   padding: 8px;
   display: grid;
   gap: 6px;
@@ -207,8 +235,8 @@
   text-align: left;
   border: 1px solid transparent;
   border-radius: 10px;
-  background: #fff;
-  color: #111;
+  background: var(--pp-cream-soft);
+  color: var(--pp-ink);
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 600;
@@ -216,7 +244,7 @@
 }
 
 .pet-portal .menu-item:hover {
-  background: #f5f5f5;
+  background: #f8eeb8;
 }
 
 .pet-portal .menu-item.danger {
@@ -225,19 +253,19 @@
 }
 
 .pet-portal .switcher button {
-  border: 1px solid rgba(17, 17, 17, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 999px;
-  background: #fff;
+  background: rgba(251, 246, 236, 0.92);
   padding: 10px 18px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .pet-portal .switcher button.active {
-  background: #111;
-  color: #fff;
-  border-color: #111;
+  background: var(--pp-yellow);
+  color: var(--pp-ink);
+  border-color: var(--pp-yellow);
 }
 
 .pet-portal .card-wrap {
@@ -246,11 +274,11 @@
 
 .pet-portal .card,
 .pet-portal .empty {
-  background: #fff;
-  border: 1px solid rgba(17, 17, 17, 0.2);
+  background: #ffffff;
+  border: 1px solid var(--pp-border);
   border-radius: 18px;
   padding: 16px;
-  box-shadow: 0 8px 22px rgba(17, 17, 17, 0.06);
+  box-shadow: 0 8px 22px var(--pp-shadow);
 }
 
 .pet-portal [hidden],
@@ -263,13 +291,13 @@
 
 .pet-portal .empty {
   text-align: center;
-  color: #666;
+  color: var(--pp-ink-soft);
 }
 
 .pet-portal .id-head {
   border-radius: 12px;
-  background: #111;
-  color: #fff;
+  background: var(--pp-yellow);
+  color: var(--pp-ink);
   padding: 10px 12px;
   font-size: 14px;
   font-weight: 700;
@@ -281,20 +309,21 @@
   margin-top: 14px;
   display: grid;
   grid-template-columns: 220px 1fr;
-  gap: 16px;
+  gap: 20px;
+  align-items: start;
 }
 
 .pet-portal .photo {
   width: 220px;
   height: 220px;
   border-radius: 16px;
-  border: 1px solid rgba(17, 17, 17, 0.22);
-  background: #ececec;
+  border: 1px solid var(--pp-border);
+  background: #f8f0df;
   display: grid;
   place-items: center;
   font-size: 38px;
   font-weight: 700;
-  color: #666;
+  color: var(--pp-ink-soft);
   overflow: hidden;
 }
 
@@ -305,18 +334,18 @@
 }
 
 .pet-portal .pet-name {
-  margin: 0;
+  margin: 0 0 2px;
   font-size: 28px;
   line-height: 1.1;
   font-weight: 800;
 }
 
 .pet-portal .pill {
-  margin-top: 6px;
+  margin-top: 8px;
   display: inline-block;
   border-radius: 999px;
-  background: #111;
-  color: #fff;
+  background: var(--pp-yellow);
+  color: var(--pp-ink);
   padding: 4px 9px;
   font-size: 11px;
   font-weight: 700;
@@ -325,10 +354,16 @@
 }
 
 .pet-portal .grid {
-  margin-top: 12px;
+  margin-top: 16px;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px 14px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, max-content));
+  justify-content: start;
+  column-gap: 28px;
+  row-gap: 12px;
+}
+
+.pet-portal .grid > * {
+  min-width: 0;
 }
 
 .pet-portal .grid strong {
@@ -336,14 +371,14 @@
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  margin-bottom: 3px;
-  color: #1f2937;
+  margin-bottom: 4px;
+  color: var(--pp-ink);
 }
 
 .pet-portal .grid span {
   display: block;
   font-size: 14px;
-  color: #4b5563;
+  color: var(--pp-ink-soft);
   line-height: 1.35;
 }
 
@@ -377,9 +412,9 @@
   top: 0;
   width: min(520px, 94vw);
   height: 100%;
-  background: #fff;
-  border-left: 1px solid rgba(17, 17, 17, 0.16);
-  box-shadow: -14px 0 28px rgba(17, 17, 17, 0.12);
+  background: #ece8dd;
+  border-left: 1px solid var(--pp-border);
+  box-shadow: -14px 0 28px var(--pp-shadow);
   transform: translateX(100%);
   transition: transform 0.25s ease;
   z-index: 2147483200;
@@ -424,7 +459,7 @@
   background: transparent;
   font-size: 24px;
   line-height: 1;
-  color: #666;
+  color: var(--pp-ink-soft);
   cursor: pointer;
 }
 
@@ -442,7 +477,7 @@
   gap: 6px !important;
   font-size: 13px !important;
   font-weight: 700 !important;
-  color: #374151 !important;
+  color: var(--pp-ink-soft) !important;
 }
 
 .pet-portal .pp-field,
@@ -450,13 +485,13 @@
   width: 100% !important;
   box-sizing: border-box !important;
   height: 42px !important;
-  border: 1px solid rgba(17, 17, 17, 0.22) !important;
+  border: 1px solid var(--pp-border) !important;
   border-radius: 11px !important;
   padding: 0 11px !important;
   font-size: 13px !important;
   font-family: "Poppins", "Trebuchet MS", sans-serif !important;
-  background: #fff !important;
-  color: #111 !important;
+  background: #fffefb !important;
+  color: var(--pp-ink) !important;
   box-shadow: none !important;
 }
 
@@ -465,12 +500,12 @@
 .pet-portal-drawer input,
 .pet-portal-drawer select {
   height: 42px;
-  border: 1px solid rgba(17, 17, 17, 0.22);
+  border: 1px solid var(--pp-border);
   border-radius: 11px;
   padding: 0 11px;
   font-size: 13px;
   font-family: "Poppins", "Trebuchet MS", sans-serif;
-  background: #fff;
+  background: #fffefb;
 }
 
 .pet-portal .span-2,
@@ -480,9 +515,9 @@
 
 .pet-portal .file-box,
 .pet-portal-drawer .file-box {
-  border: 1px solid rgba(17, 17, 17, 0.18);
+  border: 1px solid var(--pp-border);
   border-radius: 16px;
-  background: #fff;
+  background: #fff9ef;
   padding: 24px 16px 20px;
   text-align: center;
 }
@@ -490,7 +525,7 @@
 .pet-portal .upload-label,
 .pet-portal-drawer .upload-label {
   align-items: center;
-  color: #374151;
+  color: var(--pp-ink-soft);
 }
 
 .pet-portal .upload-cloud,
@@ -505,7 +540,7 @@
 .pet-portal-drawer .upload-title {
   font-size: 15px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--pp-ink);
 }
 
 .pet-portal .upload-trigger,
@@ -522,7 +557,7 @@
 .pet-portal-drawer .note {
   margin-top: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--pp-ink-soft);
 }
 
 .pet-portal .upload-name,
@@ -547,8 +582,8 @@
 .pet-portal-dialog-card {
   pointer-events: auto;
   width: min(420px, 92vw);
-  background: #fff;
-  border: 1px solid rgba(17, 17, 17, 0.16);
+  background: var(--pp-cream-soft);
+  border: 1px solid var(--pp-border);
   border-radius: 14px;
   padding: 16px;
 }
@@ -562,7 +597,7 @@
 
 .pet-portal-dialog-card p {
   margin: 0 0 12px;
-  color: #555;
+  color: var(--pp-ink-soft);
   font-size: 14px;
 }
 
