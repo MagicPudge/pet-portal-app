@@ -17,24 +17,6 @@ type PetPortalErrorCode =
   | "INTERNAL_ERROR"
   | string;
 
-const readProxyDebugMeta = (request: Request, routeTag: string) => {
-  const url = new URL(request.url);
-  const queryKeys = Array.from(url.searchParams.keys());
-  return {
-    routeTag,
-    method: request.method,
-    path: url.pathname,
-    queryKeys,
-    hasSignature: url.searchParams.has("signature"),
-    hasHmac: url.searchParams.has("hmac"),
-    hasShop: url.searchParams.has("shop"),
-    host: request.headers.get("host"),
-    xForwardedHost: request.headers.get("x-forwarded-host"),
-    xForwardedProto: request.headers.get("x-forwarded-proto"),
-    userAgent: request.headers.get("user-agent"),
-  };
-};
-
 class PetPortalHttpError extends Error {
   status: number;
   code: PetPortalErrorCode;
@@ -153,8 +135,6 @@ const toHttpError = (error: unknown) => {
 
 export const handlePetPortalLoader = async (request: Request, config: PetPortalRouteConfig) => {
   const requestId = crypto.randomUUID();
-  const debugMeta = readProxyDebugMeta(request, config.routeTag);
-  console.info("[PetPortal][proxy-loader-request]", { requestId, ...debugMeta });
   try {
     const { session } = await authenticate.public.appProxy(request);
     const shopDomain = getShopDomain(request, session?.shop);
@@ -172,35 +152,23 @@ export const handlePetPortalLoader = async (request: Request, config: PetPortalR
       requestId,
     });
   } catch (error) {
-    const authDetail = error instanceof Error ? error.message : String(error);
     const resolved =
       error instanceof PetPortalHttpError
         ? error
-        : new PetPortalHttpError("AUTH_ERROR", `Failed to validate app proxy request. ${authDetail}`.trim(), 401);
-    console.error("[PetPortal][proxy-loader-auth-error]", {
-      requestId,
-      code: resolved.code,
-      status: resolved.status,
-      message: resolved.message,
-      ...debugMeta,
-      error,
-    });
+        : new PetPortalHttpError("AUTH_ERROR", "Failed to validate app proxy request.", 401);
     return jsonError(config.routeTag, requestId, resolved.status, resolved.code, resolved.message);
   }
 };
 
 export const handlePetPortalAction = async (request: Request, config: PetPortalRouteConfig) => {
   const requestId = crypto.randomUUID();
-  const debugMeta = readProxyDebugMeta(request, config.routeTag);
-  console.info("[PetPortal][proxy-action-request]", { requestId, ...debugMeta });
   try {
     let sessionShop: string | undefined;
     try {
       const result = await authenticate.public.appProxy(request);
       sessionShop = result.session?.shop;
-    } catch (error) {
-      const authDetail = error instanceof Error ? error.message : String(error);
-      throw new PetPortalHttpError("AUTH_ERROR", `Failed to validate app proxy request. ${authDetail}`.trim(), 401);
+    } catch {
+      throw new PetPortalHttpError("AUTH_ERROR", "Failed to validate app proxy request.", 401);
     }
 
     const payload = await parsePetPortalPayload(request);
@@ -239,7 +207,6 @@ export const handlePetPortalAction = async (request: Request, config: PetPortalR
       code: resolved.code,
       status: resolved.status,
       message: resolved.message,
-      ...debugMeta,
       error,
     });
     return jsonError(config.routeTag, requestId, resolved.status, resolved.code, resolved.message);

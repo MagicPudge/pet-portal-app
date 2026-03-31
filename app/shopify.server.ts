@@ -24,14 +24,6 @@ const shopify = shopifyApp({
     : {}),
 });
 
-console.info("[ShopifyConfig][runtime-env]", {
-  nodeEnv: process.env.NODE_ENV ?? null,
-  appUrl: process.env.SHOPIFY_APP_URL ?? null,
-  apiKeyPresent: Boolean(process.env.SHOPIFY_API_KEY),
-  apiSecretPresent: Boolean(process.env.SHOPIFY_API_SECRET),
-  scopesCount: process.env.SCOPES ? process.env.SCOPES.split(",").filter(Boolean).length : 0,
-});
-
 export default shopify;
 export const apiVersion = ApiVersion.October25;
 export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
