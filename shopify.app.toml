@@ -2,7 +2,7 @@
 
 client_id = "499672bf18c61c701b9c571f58027624"
 name = "pet-portal-app"
-application_url = "https://www.poppypawz.co.uk"
+application_url = "https://pet-portal-app.vercel.app"
 embedded = true
 
 [build]
@@ -30,7 +30,7 @@ prefix = "apps"
 subpath = "pet-portal"
 
 [auth]
-redirect_urls = [ "https://www.poppypawz.co.uk/api/auth" ]
+redirect_urls = [ "https://pet-portal-app.vercel.app/auth/callback" ]
 
 [product.metafields.app.demo_info]
 type = "single_line_text_field"
