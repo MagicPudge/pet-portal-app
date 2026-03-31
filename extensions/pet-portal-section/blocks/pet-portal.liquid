@@ -1,0 +1,130 @@
+{{ 'pet-portal.css' | asset_url | stylesheet_tag }}
+
+<div class="pet-portal-section">
+<div
+  class="pet-portal"
+  data-pet-portal
+  data-app-proxy="{{ routes.root_url }}apps/pet-portal"
+  data-app-proxy-api="{{ routes.root_url }}apps/pet-portal/api"
+  data-customer-id="{{ customer.id | default: '' }}"
+>
+  <div class="pet-portal-global-message" data-global-message hidden></div>
+
+  <section class="hero">
+    <img class="brand-logo" src="{{ 'poppypawz.svg' | asset_url }}" alt="PoppyPawz" loading="lazy" />
+    <h1>Welcome to the PoppyPawz pet community</h1>
+    <p class="sub">
+      We are glad you and your pet are here. Create a profile, keep each pet's details in one place, and stay
+      connected with the PoppyPawz family.
+    </p>
+    <div class="hero-footer">
+      <div class="switcher" data-switcher></div>
+      <div class="actions">
+        <button class="pp-btn pp-btn--secondary" type="button" data-action-toggle>Action</button>
+        <div class="pet-portal-menu" data-action-menu hidden>
+          <button class="menu-item" type="button" data-action-add>Add new pet</button>
+          <button class="menu-item" type="button" data-action-edit>Edit current pet</button>
+          <button class="menu-item danger" type="button" data-action-delete>Delete current pet</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card-wrap">
+    <div class="empty" data-empty>Loading pet profiles...</div>
+    <article class="card" data-card hidden>
+      <div class="id-head">Pet Card</div>
+      <div class="card-main">
+        <div class="photo">
+          <img data-photo-preview hidden alt="Pet photo" />
+          <span data-photo-letter>P</span>
+        </div>
+        <div>
+          <h2 class="pet-name" data-field="petName">Pet name</h2>
+          <span class="pill" data-field="petType"></span>
+          <div class="grid">
+            <div><strong>Owner</strong><span data-field="owner"></span></div>
+            <div><strong>Breed</strong><span data-field="breed"></span></div>
+            <div><strong>Gender</strong><span data-field="gender"></span></div>
+            <div><strong>Birthday</strong><span data-field="birthday"></span></div>
+            <div><strong>Adoption Date</strong><span data-field="adoptionDate"></span></div>
+            <div><strong>Weight</strong><span data-field="weight"></span></div>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <div class="pet-portal-drawer-backdrop" data-drawer-backdrop hidden></div>
+  <aside class="pet-portal-drawer" data-drawer hidden>
+    <div class="pet-portal-drawer-head">
+      <h2 data-drawer-title>Add a new pet</h2>
+      <button class="pet-portal-close" type="button" data-drawer-close>x</button>
+    </div>
+
+    <form data-form>
+      <label>First Name<input class="pp-field" type="text" name="firstName" placeholder="First Name" /></label>
+      <label>Last Name<input class="pp-field" type="text" name="lastName" placeholder="Last Name" /></label>
+      <label>Pet Name *<input class="pp-field" type="text" name="petName" required placeholder="Pet name *" /></label>
+      <label>
+        Pet Type *
+        <select class="pp-field" name="petType">
+          <option value="dog">Dog</option>
+          <option value="cat">Cat</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label>
+        Gender
+        <select class="pp-field" name="gender">
+          <option value="female">Female</option>
+          <option value="male">Male</option>
+          <option value="unknown">Unknown</option>
+        </select>
+      </label>
+      <label>Breed<select class="pp-field" name="breed"></select></label>
+      <label>Birthday<input class="pp-field" type="date" name="birthday" /></label>
+      <label>Adoption Date<input class="pp-field" type="date" name="adoptionDate" /></label>
+      <label>Weight (kg)<input class="pp-field" type="number" min="0" max="200" step="0.1" name="weightKg" placeholder="Weight (kg)" /></label>
+      <div class="span-2 file-box">
+        <label class="upload-label">
+          <span class="upload-cloud">CLOUD</span>
+          <span class="upload-title">Pet photo (optional)</span>
+          <button class="pp-btn upload-trigger" type="button" data-photo-button>Browse for images</button>
+          <input class="file-input-hidden" type="file" accept="image/*" data-photo-input />
+          <span class="upload-hint">Max 900kb. JPG/PNG/WebP recommended.</span>
+          <span class="upload-name" data-photo-name></span>
+        </label>
+      </div>
+      <div class="span-2 row-actions">
+        <button class="pp-btn pp-btn--secondary" type="reset">Reset</button>
+        <button class="pp-btn" type="submit" data-submit-label>Save profile</button>
+      </div>
+    </form>
+
+    <div class="note" data-note hidden></div>
+  </aside>
+
+  <div class="pet-portal-dialog-backdrop" data-dialog-backdrop hidden></div>
+  <div class="pet-portal-dialog" data-dialog hidden>
+    <div class="pet-portal-dialog-card">
+      <h3>Delete pet profile?</h3>
+      <p>This action cannot be undone.</p>
+      <div class="row-actions">
+        <button class="pp-btn pp-btn--secondary" type="button" data-dialog-cancel>Cancel</button>
+        <button class="pp-btn pp-btn--danger" type="button" data-dialog-confirm>Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+{{ 'pet-portal.js' | asset_url | script_tag }}
+
+{% schema %}
+{
+  "name": "Pet portal",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}

@@ -36,11 +36,3 @@ export type PetProfileRow = {
   weight_kg: number | null;
   photo_path: string | null;
 };
-
-export type ActionResult = {
-  ok: boolean;
-  message?: string;
-  pets?: PetProfile[];
-  pet?: PetProfile;
-  deletedId?: string;
-};

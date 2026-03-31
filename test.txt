@@ -1,0 +1,1 @@
+shopify app dev --theme-app-extension-port=9393
