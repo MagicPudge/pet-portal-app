@@ -172,10 +172,11 @@ export const handlePetPortalLoader = async (request: Request, config: PetPortalR
       requestId,
     });
   } catch (error) {
+    const authDetail = error instanceof Error ? error.message : String(error);
     const resolved =
       error instanceof PetPortalHttpError
         ? error
-        : new PetPortalHttpError("AUTH_ERROR", "Failed to validate app proxy request.", 401);
+        : new PetPortalHttpError("AUTH_ERROR", `Failed to validate app proxy request. ${authDetail}`.trim(), 401);
     console.error("[PetPortal][proxy-loader-auth-error]", {
       requestId,
       code: resolved.code,
@@ -197,8 +198,9 @@ export const handlePetPortalAction = async (request: Request, config: PetPortalR
     try {
       const result = await authenticate.public.appProxy(request);
       sessionShop = result.session?.shop;
-    } catch {
-      throw new PetPortalHttpError("AUTH_ERROR", "Failed to validate app proxy request.", 401);
+    } catch (error) {
+      const authDetail = error instanceof Error ? error.message : String(error);
+      throw new PetPortalHttpError("AUTH_ERROR", `Failed to validate app proxy request. ${authDetail}`.trim(), 401);
     }
 
     const payload = await parsePetPortalPayload(request);
