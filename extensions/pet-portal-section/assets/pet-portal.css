@@ -668,6 +668,17 @@
     justify-content: center;
   }
 
+  .pet-portal .actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pet-portal .pet-portal-menu {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
   .pet-portal .grid,
   .pet-portal form {
     grid-template-columns: 1fr;
