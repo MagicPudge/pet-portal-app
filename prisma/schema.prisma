@@ -33,3 +33,21 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+model WelcomeEmailLog {
+  id              String             @id @default(cuid())
+  emailNormalized String             @unique
+  customerId      String?
+  shop            String
+  status          WelcomeEmailStatus
+  sentAt          DateTime?
+  provider        String
+  errorMessage    String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+enum WelcomeEmailStatus {
+  SENT
+  FAILED
+}

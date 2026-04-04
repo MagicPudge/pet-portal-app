@@ -1,6 +1,6 @@
 ﻿# Pet Portal App
 
-面向 Shopify 的嵌入式应用示例。基于 React Router + Shopify App React Router + Prisma（SQLite）构建，包含：
+面向 Shopify 的嵌入式应用示例。基于 React Router + Shopify App React Router + Prisma（Supabase Postgres）构建，包含：
 - Shopify 管理后台内嵌页面
 - Admin GraphQL 示例（创建产品、更新变体、写入 metaobject）
 - Webhook 处理（卸载与权限变更）
@@ -48,7 +48,7 @@ app/
   db.server.ts              # Prisma Client
   root.tsx                  # HTML shell
 prisma/
-  schema.prisma             # SQLite 数据模型（Session）
+  schema.prisma             # Postgres 数据模型（Session / WelcomeEmailLog）
 shopify.app.toml            # Shopify 应用配置（webhooks / scopes / metaobjects）
 shopify.web.toml            # 本地开发命令配置
 ```
@@ -99,10 +99,14 @@ pnpm setup
 pnpm typecheck
 ```
 
-## 数据库（Prisma + SQLite）
+## 数据库（Prisma + Supabase Postgres）
 
-默认使用 SQLite 数据库，文件位于 `prisma/dev.sqlite`。会话数据存储在 `Session` 表中。
-如需生产环境可替换为 MySQL/PostgreSQL 等。
+默认使用 Supabase Postgres，通过 Prisma 连接。
+
+- `DATABASE_URL`：应用运行时连接（推荐 Supabase pooler 连接）
+- `DIRECT_URL`：迁移时连接（Supabase direct 连接）
+
+运行 `pnpm setup` 会执行 `prisma migrate deploy`，在目标 Postgres 中创建/更新表结构。
 
 ## 如何新增页面
 
