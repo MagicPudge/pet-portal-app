@@ -1,219 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to Poppy Pawz</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #f4f4f4;
-      font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      color: #1c1c1c;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to the Poppy Pawz Family!</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        
+        /* Top Banner */
+        .top-bar { background-color: #FFEA2D; padding: 12px 5px; text-align: center; }
+        .trust-icons { display: table; width: 100%; font-size: 9px; font-weight: bold; color: #000; text-transform: uppercase; border-collapse: collapse; }
+        .trust-item { display: table-cell; width: 25%; padding: 0 2px; line-height: 1.2; }
+        
+        .header { padding: 40px 20px; text-align: center; }
+        .logo { width: 180px; height: auto; }
 
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #ffffff;
-    }
+        .content-body { padding: 40px 30px; text-align: center; color: #333333; }
+        h1 { font-size: 28px; margin-bottom: 20px; color: #000; font-weight: 800; }
+        p { font-size: 16px; line-height: 1.6; margin-bottom: 25px; }
 
-    .top-bar {
-      background-color: #ffea2d;
-      padding: 12px 8px;
-      text-align: center;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: #111111;
-      letter-spacing: 0.2px;
-    }
+        /* Coupon Box */
+        .coupon-box { 
+            background-color: #f9f9f9; 
+            border: 3px dashed #FFEA2D; 
+            padding: 25px; 
+            border-radius: 15px; 
+            margin: 20px 0;
+        }
+        .coupon-code { font-size: 32px; font-weight: bold; color: #000; letter-spacing: 2px; }
 
-    .header {
-      padding: 32px 20px 24px;
-      text-align: center;
-    }
+        /* Pet Profile Highlight Box - NEW SECTION */
+        .pet-profile-box {
+            background-color: #fffbe6; /* Soft yellow highlight */
+            border: 1px solid #FFEA2D;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 30px 0;
+        }
+        .pet-profile-box h2 { font-size: 20px; margin-top: 0; color: #1b4d3e; }
+        .pet-profile-box p { font-size: 14px; margin-bottom: 15px; }
 
-    .logo {
-      width: 190px;
-      max-width: 100%;
-      height: auto;
-    }
+        .btn { background-color: #000000; color: #ffffff !important; padding: 18px 40px; text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block; font-size: 16px; }
+        .btn-small { background-color: #3197FF; color: #ffffff !important; padding: 10px 20px; text-decoration: none; border-radius: 25px; font-weight: bold; display: inline-block; font-size: 13px; }
 
-    .hero {
-      padding: 0 28px;
-    }
-
-    .hero-card {
-      border-radius: 14px;
-      background: #3197ff;
-      color: #ffffff;
-      padding: 20px;
-      text-align: center;
-      font-size: 18px;
-      font-weight: 700;
-      line-height: 1.4;
-    }
-
-    .content-body {
-      padding: 34px 30px;
-      text-align: left;
-      line-height: 1.65;
-      font-size: 15px;
-    }
-
-    h1 {
-      margin: 0 0 16px;
-      font-size: 30px;
-      color: #111111;
-      line-height: 1.2;
-      text-align: center;
-    }
-
-    p {
-      margin: 0 0 16px;
-    }
-
-    .coupon-box {
-      margin: 26px auto;
-      max-width: 420px;
-      padding: 20px;
-      border: 2px dashed #ffea2d;
-      border-radius: 14px;
-      background-color: #fffdf1;
-      text-align: center;
-    }
-
-    .coupon-title {
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      text-transform: uppercase;
-      color: #555555;
-    }
-
-    .coupon-code {
-      font-size: 32px;
-      line-height: 1;
-      font-weight: 800;
-      color: #111111;
-      letter-spacing: 1.5px;
-    }
-
-    .button-wrap {
-      text-align: center;
-      margin: 28px 0 0;
-    }
-
-    .btn {
-      display: inline-block;
-      padding: 14px 28px;
-      border-radius: 999px;
-      background-color: #111111;
-      color: #ffffff !important;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 14px;
-      letter-spacing: 0.2px;
-    }
-
-    .footer {
-      background-color: #3197ff;
-      color: #ffffff;
-      text-align: center;
-      padding: 30px 24px;
-      font-size: 13px;
-      line-height: 1.65;
-    }
-
-    .footer a {
-      color: #ffffff;
-      text-decoration: none;
-    }
-
-    .footer-links {
-      margin: 14px 0;
-    }
-
-    .small {
-      opacity: 0.9;
-      font-size: 12px;
-    }
-
-    @media only screen and (max-width: 620px) {
-      .content-body {
-        padding: 30px 20px;
-      }
-
-      .hero {
-        padding: 0 20px;
-      }
-
-      .hero-card {
-        font-size: 16px;
-      }
-
-      h1 {
-        font-size: 26px;
-      }
-    }
-  </style>
+        /* Footer */
+        .footer { background-color: #3197FF; padding: 40px 30px; color: #ffffff; text-align: center; }
+        .footer a { color: #ffffff; text-decoration: none; font-size: 14px; margin: 0 10px; }
+        .social-icons { margin-bottom: 20px; }
+        .social-icons img { width: 30px; margin: 0 10px; filter: brightness(0) invert(1); }
+        .address { font-size: 12px; opacity: 0.9; margin-top: 20px; line-height: 1.5; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div class="top-bar">
-      10% off first order | Free shipping over GBP 40 | 30-day free return | 24/7 support
+    <div class="container">
+        <div class="top-bar">
+            <div class="trust-icons">
+                <div class="trust-item">🎁 10% OFF FIRST ORDER</div>
+                <div class="trust-item">🔄 30-DAY FREE RETURN</div>
+                <div class="trust-item">🌿 100% SUSTAINABLE</div>
+                <div class="trust-item">🕒 24/7 SUPPORT</div>
+            </div>
+        </div>
+
+        <div class="header">
+            <img src="https://gmyibxoukhpelmcoxdtl.supabase.co/storage/v1/object/public/poppypawz-public/poppypawz.svg" alt="Poppy Pawz" class="logo">
+        </div>
+
+        <div class="content-body">
+            <h1>Welcome to the Family! 🐾</h1>
+            <p>We're so happy you're here. At <strong>Poppy Pawz</strong>, we treat every pet like our own. Use the code below to save on your first order:</p>
+
+            <div class="coupon-box">
+                <div style="font-size: 14px; margin-bottom: 10px; text-transform: uppercase; color: #666;">Your Welcome Discount</div>
+                <div class="coupon-code">WELCOME10</div>
+            </div>
+
+            <a href="https://www.poppypawz.co.uk/" class="btn">SHOP NOW</a>
+
+            <div class="pet-profile-box">
+                <h2>Want an Extra Treat? 🦴</h2>
+                <p>Tell us more about your furry friend! Complete your <strong>Pet Profile</strong> and we'll send you an <strong>extra discount coupon</strong> tailored just for them.</p>
+                <a href="https://www.poppypawz.co.uk/pages/pet-profile" class="btn-small">COMPLETE PET PROFILE</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="social-icons">
+                <p style="margin-bottom: 15px; font-weight: bold; letter-spacing: 1px;">FOLLOW THE PAWZ</p>
+                <a href="https://www.instagram.com/poppypawz.couk/"><img src="https://cdn-icons-png.flaticon.com/512/1384/1384063.png" alt="Instagram"></a>
+                <a href="https://www.tiktok.com/@poppypawz.co.uk"><img src="https://cdn-icons-png.flaticon.com/512/3046/3046121.png" alt="TikTok"></a>
+            </div>
+
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a> | <a href="#">Returns</a> | <a href="#">Contact</a>
+            </div>
+
+            <div class="address">
+                PoppyPawz®<br>
+                3-9 Hyde Road, Manchester, M12 6BQ<br>
+                support@poppypawz.co.uk
+            </div>
+            <p style="font-size: 11px; margin-top: 30px; opacity: 0.7;">
+                <a href="#" style="text-decoration: underline;">Unsubscribe</a>
+            </p>
+        </div>
     </div>
-
-    <div class="header">
-      <img
-        src="https://gmyibxoukhpelmcoxdtl.supabase.co/storage/v1/object/public/poppypawz-public/poppypawz.svg"
-        alt="Poppy Pawz"
-        class="logo"
-      />
-    </div>
-
-    <div class="hero">
-      <div class="hero-card">Welcome to {{shop_name}}.</div>
-    </div>
-
-    <div class="content-body">
-      <h1>Hi {{customer_name}}, welcome.</h1>
-
-      <p>
-        Thank you for creating an account with <strong>{{shop_name}}</strong>. We are excited to help you find great products for your pets.
-      </p>
-
-      <p>
-        Here is your welcome gift for the first order:
-      </p>
-
-      <div class="coupon-box">
-        <div class="coupon-title">Use code at checkout</div>
-        <div class="coupon-code">WELCOME10</div>
-      </div>
-
-      <div class="button-wrap">
-        <a href="{{cta_url}}" class="btn">Shop now</a>
-      </div>
-    </div>
-
-    <div class="footer">
-      <strong>PoppyPawz</strong><br />
-      3-9 Hyde Road, Manchester, M12 6BQ
-
-      <div class="footer-links">
-        <a href="https://www.poppypawz.co.uk/pages/privacy-policy">Privacy Policy</a> |
-        <a href="https://www.poppypawz.co.uk/pages/refund-policy">Returns and Refunds</a> |
-        <a href="https://www.poppypawz.co.uk/pages/contact">Contact us</a>
-      </div>
-
-      <div class="small">
-        If you did not create this account, please contact support@poppypawz.co.uk.
-      </div>
-    </div>
-  </div>
 </body>
 </html>
