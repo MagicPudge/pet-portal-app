@@ -1,5 +1,5 @@
 import { authenticate } from "../../shopify.server";
-import { PetPortalDataError, deletePet, getCustomerId, getShopDomain, getSupabaseConfig, listPets, savePet } from "./data.server";
+import { PetPortalDataError, deletePet, getCustomerEmail, getCustomerId, getShopDomain, getSupabaseConfig, listPets, savePet } from "./data.server";
 
 type PetPortalRouteConfig = {
   routeTag: string;
@@ -174,6 +174,7 @@ export const handlePetPortalAction = async (request: Request, config: PetPortalR
     const payload = await parsePetPortalPayload(request);
     const shopDomain = getShopDomain(request, sessionShop);
     const customerId = getCustomerId(request, payload.formData);
+    const customerEmail = getCustomerEmail(request, payload.formData);
     const supabaseConfig = getSupabaseConfig();
 
     if (!shopDomain) {
@@ -197,7 +198,7 @@ export const handlePetPortalAction = async (request: Request, config: PetPortalR
       return jsonOk(config.routeTag, requestId, { ok: true, message: "Pet profile removed.", deletedId: id, requestId });
     }
 
-    const { pet, message } = await savePet(supabaseConfig, shopDomain, customerId, payload.formData);
+    const { pet, message } = await savePet(supabaseConfig, shopDomain, customerId, customerEmail, payload.formData);
     return jsonOk(config.routeTag, requestId, { ok: true, message, pet, requestId });
   } catch (error) {
     const resolved = toHttpError(error);

@@ -26,6 +26,7 @@
     const appProxy = root.getAttribute("data-app-proxy") || "/apps/pet-portal";
     const appProxyApi = root.getAttribute("data-app-proxy-api") || `${appProxy.replace(/\/$/, "")}/api`;
     const customerIdHint = (root.getAttribute("data-customer-id") || "").trim();
+    const customerEmailHint = (root.getAttribute("data-customer-email") || "").trim();
     const switcher = root.querySelector("[data-switcher]");
     const actionToggle = root.querySelector("[data-action-toggle]");
     const actionMenu = root.querySelector("[data-action-menu]");
@@ -138,6 +139,9 @@
 
       if (customerIdHint && !fd.get("customer_id_hint")) {
         fd.set("customer_id_hint", customerIdHint);
+      }
+      if (customerEmailHint && !fd.get("customer_email_hint")) {
+        fd.set("customer_email_hint", customerEmailHint);
       }
 
       const response = await fetch(appProxyApi, {

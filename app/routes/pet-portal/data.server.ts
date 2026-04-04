@@ -99,6 +99,21 @@ export const getShopDomain = (request: Request, sessionShop?: string) => {
   return requestUrl.searchParams.get("shop");
 };
 
+export const getCustomerEmail = (request: Request, formData?: FormData | null) => {
+  const requestUrl = new URL(request.url);
+  const emailFromQuery =
+    requestUrl.searchParams.get("logged_in_customer_email") ||
+    requestUrl.searchParams.get("customer_email");
+  if (emailFromQuery && emailFromQuery.trim()) {
+    return emailFromQuery.trim().toLowerCase();
+  }
+
+  const bodyHint = formData ? String(formData.get("customer_email_hint") ?? "").trim() : "";
+  if (bodyHint) return bodyHint.toLowerCase();
+
+  return null;
+};
+
 const supabaseHeaders = (serviceRoleKey: string) => ({
   apikey: serviceRoleKey,
   Authorization: `Bearer ${serviceRoleKey}`,
@@ -377,6 +392,7 @@ export const savePet = async (
   config: SupabaseConfig,
   shopDomain: string,
   customerId: string,
+  customerEmail: string | null,
   formData: FormData,
 ) => {
   const mode = String(formData.get("mode") ?? "create");
@@ -426,6 +442,7 @@ export const savePet = async (
     adoption_date: String(formData.get("adoptionDate") ?? "") || null,
     weight_kg: String(formData.get("weightKg") ?? "") ? Number(String(formData.get("weightKg"))) : null,
     photo_path: photoPath || null,
+    ...(customerEmail ? { email: customerEmail } : {}),
   };
 
   const response = await fetch(
