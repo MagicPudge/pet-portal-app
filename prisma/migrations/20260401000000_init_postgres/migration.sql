@@ -1,6 +1,12 @@
 -- CreateEnum
 CREATE TYPE "WelcomeEmailStatus" AS ENUM ('SENT', 'FAILED');
 
+-- CreateEnum
+CREATE TYPE "PetType" AS ENUM ('dog', 'cat', 'other');
+
+-- CreateEnum
+CREATE TYPE "Gender" AS ENUM ('male', 'female', 'unknown');
+
 -- CreateTable
 CREATE TABLE "Session" (
     "id" TEXT NOT NULL,
@@ -40,5 +46,33 @@ CREATE TABLE "WelcomeEmailLog" (
     CONSTRAINT "WelcomeEmailLog_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "pet_profiles" (
+    "id" TEXT NOT NULL DEFAULT gen_random_uuid()::text,
+    "shop_domain" TEXT NOT NULL,
+    "customer_id" TEXT NOT NULL,
+    "email" TEXT,
+    "first_name" TEXT,
+    "last_name" TEXT,
+    "pet_name" TEXT NOT NULL,
+    "pet_type" "PetType" NOT NULL,
+    "breed" TEXT,
+    "gender" "Gender" NOT NULL DEFAULT 'unknown',
+    "birthday" DATE,
+    "adoption_date" DATE,
+    "weight_kg" DECIMAL(10,2),
+    "photo_path" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "pet_profiles_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "WelcomeEmailLog_emailNormalized_key" ON "WelcomeEmailLog"("emailNormalized");
+
+-- CreateIndex
+CREATE INDEX "pet_profiles_shop_customer_idx" ON "pet_profiles"("shop_domain", "customer_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "pet_profiles_shop_customer_pet_name_key" ON "pet_profiles"("shop_domain", "customer_id", "pet_name");

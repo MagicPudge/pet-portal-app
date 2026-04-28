@@ -106,7 +106,7 @@ pnpm typecheck
 - `DATABASE_URL`：应用运行时连接（推荐 Supabase pooler 连接）
 - `DIRECT_URL`：迁移时连接（Supabase direct 连接）
 
-运行 `pnpm setup` 会执行 `prisma migrate deploy`，在目标 Postgres 中创建/更新表结构。
+运行 `pnpm setup` 会执行项目内的幂等 SQL bootstrap，在目标 Postgres 中补齐 `Session` 和 `WelcomeEmailLog` 所需表结构。
 
 ## 如何新增页面
 

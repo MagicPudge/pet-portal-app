@@ -47,6 +47,41 @@ model WelcomeEmailLog {
   updatedAt       DateTime           @updatedAt
 }
 
+model PetProfile {
+  id           String   @id @default(dbgenerated("gen_random_uuid()::text")) @db.Text
+  shopDomain   String   @map("shop_domain")
+  customerId   String   @map("customer_id")
+  email        String?  @db.Text
+  firstName    String?  @map("first_name") @db.Text
+  lastName     String?  @map("last_name") @db.Text
+  petName      String   @map("pet_name") @db.Text
+  petType      PetType  @map("pet_type")
+  breed        String?  @db.Text
+  gender       Gender   @default(unknown)
+  birthday     DateTime? @db.Date
+  adoptionDate DateTime? @map("adoption_date") @db.Date
+  weightKg     Decimal? @map("weight_kg") @db.Decimal(10, 2)
+  photoPath    String?  @map("photo_path") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("pet_profiles")
+  @@index([shopDomain, customerId], map: "pet_profiles_shop_customer_idx")
+  @@unique([shopDomain, customerId, petName], map: "pet_profiles_shop_customer_pet_name_key")
+}
+
+enum PetType {
+  dog
+  cat
+  other
+}
+
+enum Gender {
+  male
+  female
+  unknown
+}
+
 enum WelcomeEmailStatus {
   SENT
   FAILED
