@@ -2,7 +2,7 @@
 
 client_id = "499672bf18c61c701b9c571f58027624"
 name = "pet-portal-app"
-application_url = "https://pet-portal-app.vercel.app"
+application_url = "https://project-fasq5.vercel.app"
 embedded = true
 
 [build]
@@ -34,7 +34,7 @@ prefix = "apps"
 subpath = "pet-portal"
 
 [auth]
-redirect_urls = [ "https://pet-portal-app.vercel.app/auth/callback" ]
+redirect_urls = [ "https://project-fasq5.vercel.app/auth/callback" ]
 
 [product.metafields.app.demo_info]
 type = "single_line_text_field"
