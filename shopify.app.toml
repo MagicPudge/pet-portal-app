@@ -8,33 +8,32 @@ embedded = true
 [build]
 automatically_update_urls_on_dev = true
 
-
 [webhooks]
 api_version = "2026-04"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
-  uri = "/webhooks/app/uninstalled"
+  topics = [ "customers/create" ]
+  uri = "/webhooks/customers/create"
 
   [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
-  topics = [ "customers/create" ]
-  uri = "/webhooks/customers/create"
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_customers,write_app_proxy,write_metaobject_definitions,write_metaobjects,write_products"
 
-[app_proxy]
-url = "/proxy/pet-portal"
-prefix = "apps"
-subpath = "pet-portal"
-
 [auth]
 redirect_urls = [ "https://project-fasq5.vercel.app/auth/callback" ]
+
+[app_proxy]
+url = "https://project-fasq5.vercel.app/proxy/pet-portal"
+subpath = "pet-portal"
+prefix = "apps"
 
 [product.metafields.app.demo_info]
 type = "single_line_text_field"

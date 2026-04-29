@@ -12,7 +12,7 @@
   <div class="pet-portal-global-message" data-global-message hidden></div>
 
   <section class="hero">
-    <img class="brand-logo" src="{{ 'poppypawz.svg' | asset_url }}" alt="PoppyPawz" loading="lazy" />
+    <img class="brand-logo" src="{{ 'poppypawz.svg' | asset_url }}" alt="PoppyPawz" loading="lazy" width="160" height="160" />
     <h1>Welcome to the PoppyPawz pet community</h1>
     <p class="sub">
       We are glad you and your pet are here. Create a profile, keep each pet's details in one place, and stay
@@ -37,7 +37,7 @@
       <div class="id-head">Pet Card</div>
       <div class="card-main">
         <div class="photo">
-          <img data-photo-preview hidden alt="Pet photo" />
+          <img data-photo-preview hidden alt="Pet photo" width="160" height="160" />
           <span data-photo-letter>P</span>
         </div>
         <div>
@@ -120,7 +120,7 @@
 </div>
 </div>
 
-{{ 'pet-portal.js' | asset_url | script_tag }}
+<script src="{{ 'pet-portal.js' | asset_url }}" defer></script>
 
 {% schema %}
 {
