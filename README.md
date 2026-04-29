@@ -75,7 +75,7 @@ shopify.web.toml            # 本地开发命令配置
 pnpm dev
 ```
 
-- 构建：
+- 构建（纯编译，不改数据库）：
 
 ```bash
 pnpm build
@@ -106,7 +106,9 @@ pnpm typecheck
 - `DATABASE_URL`：应用运行时连接（推荐 Supabase pooler 连接）
 - `DIRECT_URL`：迁移时连接（Supabase direct 连接）
 
-运行 `pnpm setup` 会执行项目内的幂等 SQL bootstrap，在目标 Postgres 中补齐 `Session` 和 `WelcomeEmailLog` 所需表结构。
+运行 `pnpm setup` 会执行项目内的幂等 SQL bootstrap，在目标 Postgres 中补齐 `Session`、`WelcomeEmailLog` 和 `pet_profiles` 所需表结构。
+
+注意：`pnpm build` 不会执行数据库变更。部署到 Vercel 时，避免把 `pnpm setup` 放进 Build Command；数据库初始化或补结构应单独执行，否则构建阶段会对生产库重复写入/建索引，导致部署失败。
 
 ## 如何新增页面
 
